@@ -2,7 +2,7 @@
 // Con internet SIEMPRE pide la version mas reciente de cada archivo (asi las actualizaciones llegan
 // al abrir la app); sin internet usa la copia guardada.
 // Si agregas archivos nuevos al juego, ponlos en CORE y sube el numero de CACHE.
-const CACHE = 'gatochef-v14';
+const CACHE = 'gatochef-v15';
 const CORE = [
   './',
   './index.html',

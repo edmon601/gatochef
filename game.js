@@ -4,7 +4,7 @@
    Sin publicidad, sin internet, sin compras, sin enlaces.
    ========================================================= */
 
-const APP_VERSION = '14';
+const APP_VERSION = '15';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };

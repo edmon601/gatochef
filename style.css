@@ -473,3 +473,6 @@ canvas.decor { width: min(88vw, 340px); height: auto; aspect-ratio: 300 / 180; b
 /* Inicio con muchas recetas: la lista se desplaza hacia abajo */
 .recipes { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1 1 0; min-height: 168px; max-height: 46vh; align-content: start; padding: 4px 4px 8px; touch-action: pan-y; }
 .home-cat { max-height: 30vh; }
+/* presentacion final: centrada y con mas espacio antes de los botones */
+.win-cookies.pres { display: flex; justify-content: center; margin: 8px 0 34px; }
+.win-cookies.pres .table { margin-bottom: -44px; }
