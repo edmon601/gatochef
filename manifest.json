@@ -1,0 +1,17 @@
+{
+  "name": "Gato Chef",
+  "short_name": "Gato Chef",
+  "description": "Un gatito chef que cocina 9 recetas con minijuegos. Sin publicidad.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fff3dc",
+  "theme_color": "#f4963a",
+  "lang": "es",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

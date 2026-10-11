@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f4963a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Gato Chef</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- INICIO -->
+    <section id="home" class="screen active">
+      <button id="btnGear" class="gear" aria-label="Ajustes para papás">⚙️</button>
+      <h1 class="title">Gato Chef</h1>
+      <div id="homeCat" class="home-cat" role="button" aria-label="Gato chef"></div>
+      <div class="recipes" id="recipes"></div>
+    </section>
+
+    <!-- JUEGO -->
+    <section id="game" class="screen">
+      <header class="topbar">
+        <button id="btnHome" class="round" aria-label="Inicio">🏠</button>
+        <div id="dots" class="dots"></div>
+        <button id="btnSound" class="round" aria-label="Sonido">🔊</button>
+      </header>
+      <div class="guide">
+        <div id="catGuide" class="guide-cat"></div>
+        <div id="bubble" class="bubble"></div>
+      </div>
+      <main id="stage" class="stage"></main>
+    </section>
+
+    <!-- FINAL -->
+    <section id="win" class="screen">
+      <div id="confetti" class="confetti"></div>
+      <div id="winCat" class="win-cat"></div>
+      <h2 class="win-title">¡Galletas listas!</h2>
+      <div id="winCookies" class="win-cookies"></div>
+      <div class="win-buttons">
+        <button id="btnAgain" class="bigbtn">🔄</button>
+        <button id="btnWinHome" class="bigbtn">🏠</button>
+      </div>
+    </section>
+
+    <!-- AJUSTES (para papás: mantener presionado el engranaje) -->
+    <div id="settings" class="settings" hidden>
+      <div class="settings-box">
+        <h3>Ajustes para papás</h3>
+        <label>Volumen
+          <input id="setVolume" type="range" min="0.1" max="1" step="0.05">
+        </label>
+        <label class="check"><input id="setVoice" type="checkbox"> Voz que explica cada paso</label>
+        <label class="check"><input id="setStress" type="checkbox"> Maullido de gato estresado al equivocarse</label>
+        <label class="check"><input id="setMic" type="checkbox"> 🎤 Usar el micrófono para soplar</label>
+        <label>Sensibilidad del soplido
+          <input id="setSens" type="range" min="0.4" max="2.5" step="0.1">
+        </label>
+        <button id="btnTestMic" class="settings-test">🎤 Probar micrófono (sopla hacia el celular)</button>
+        <div id="micMeter" class="micmeter" hidden><div id="micFill" class="micfill"></div></div>
+        <p id="micState" class="diag" hidden></p>
+        <button id="btnTestMeow" class="settings-test">🔊 Probar el maullido de error</button>
+        <p id="diag" class="diag"></p>
+        <button id="btnCloseSettings" class="settings-close">Cerrar</button>
+      </div>
+    </div>
+
+  </div>
+  <div id="rotate" class="rotate-msg" aria-hidden="true"><div class="rotate-icon">📱</div><div class="rotate-text">¡Gira el celular!</div></div>
+  <script src="embedded-sounds.js"></script>
+  <script src="game.js"></script>
+  <script src="recipes.js"></script>
+  <script>boot();</script>
+</body>
+</html>
