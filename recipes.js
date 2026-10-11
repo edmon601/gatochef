@@ -315,7 +315,7 @@ function makeCount(o) {
       else if (lv === 2 || Math.random() < 0.5) { const x = lv === 2 ? rnd(1, 5) : rnd(3, 8), y = lv === 2 ? rnd(1, 5) : rnd(3, 8); parts = [x, y]; op = '+'; ans = x + y; q = `¿${Q} ${what} hay en total?`; }
       else { const x = rnd(6, 12), y = rnd(2, 5); parts = [x, y]; op = '-'; ans = x - y; q = `Se comen ${y}. ¿${Q} ${what} ${QD}?`; }
       const msg = '🔢 ' + q;
-      showBubble(msg, ''); Game.currentText = msg; Voice.say(withName(q));
+      showBubble(msg, ''); Game.currentText = msg; Voice.say(q);
       st.innerHTML = `<div class="countbox"></div><div class="shelf cnums"></div>`;
       const box = $('.countbox', st), shelf = $('.cnums', st);
       const group = (n, gone) => { const g = el('div', 'cgroup'); for (let i = 0; i < n; i++) g.appendChild(el('span', 'cthing' + (gone && i >= n - gone ? ' gone' : ''), e)); return g; };

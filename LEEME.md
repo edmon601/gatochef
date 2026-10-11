@@ -43,7 +43,7 @@ Todas están abiertas desde el inicio (sin bloqueos, para que nunca se frustre).
 
 ## 🌟 Novedades de la versión 7
 
-- **La voz y los elogios le hablan por su nombre** ("Adaia, toca la harina…", "¡Eres la mejor cocinera, Adaia!"). El nombre se cambia en Ajustes para papás.
+- **Los elogios a veces llevan su nombre** ("¡Eres la mejor cocinera, Adaia!"), solo de vez en cuando y al azar; las instrucciones de cada paso no lo llevan. El nombre se cambia en Ajustes para papás.
 - **Ingredientes reales con etiqueta** (harina, azúcar, polvo de hornear, huevos, mantequilla…) y **batidor** para batir masas. Las masas de torta y cupcakes se hacen como en la vida real: primero lo seco y luego lo húmedo.
 - **Números**: al final de cada receta hay un paso de contar (nivel 1), sumar (nivel 2) o sumar/restar (nivel 3). Además las cantidades de ingredientes, las velas y las pizcas de sal piden contar.
 - **Decorar la torta y los cupcakes** con crema, chocolate, fresas y lluvia de colores; la torta decorada aparece después con las velas que hay que soplar.
@@ -111,7 +111,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
    No hace falta tener todos: los que falten usan el sonido de reemplazo.
 2. Escribe los nombres con extensión en `sounds/list.json`, por ejemplo:
    `["meow-ok-1.mp3", "meow-bad-1.mp3", "crack.wav"]` (la lista actual ya trae `meow-bad-1.mp3`; agrega los nuevos sin quitarlo)
-3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v7`; pasa a `gatochef-v8`) y agrega los archivos nuevos a la lista `CORE` para que
+3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v8`; pasa a `gatochef-v9`) y agrega los archivos nuevos a la lista `CORE` para que
    los celulares ya instalados descarguen los cambios.
 
 ## Actualizar y comprobar que tienes la versión nueva
@@ -119,7 +119,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
 1. Sube **todos** los archivos al hosting (incluido `embedded-sounds.js`).
 2. Abre la app **dos veces** (la primera descarga la versión nueva, la segunda la usa).
 3. Comprueba: en la pantalla de inicio **mantén presionado 1 segundo el engranaje ⚙️**. Abajo debe decir
-   `Versión 7 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
+   `Versión 8 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
 4. Si NO aparece la línea de "Versión" o dice otra versión, el celular sigue con archivos viejos: en Android abre
    Ajustes → Aplicaciones → Gato Chef → Almacenamiento → **Borrar caché** (y si hace falta **Borrar datos**), o desinstala y vuelve a instalar.
 

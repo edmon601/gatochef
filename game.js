@@ -4,7 +4,7 @@
    Sin publicidad, sin internet, sin compras, sin enlaces.
    ========================================================= */
 
-const APP_VERSION = '7';
+const APP_VERSION = '8';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -479,13 +479,13 @@ const bubble = $('#bubble');
 const guide = $('#catGuide');
 const NAME = () => (Settings.data.name || '').trim();
 // "Adaia, toca la zanahoria..." (la voz le habla por su nombre)
-const withName = (t) => { const n = NAME(); if (!n || !t) return t; return n + ', ' + t.charAt(0).toLowerCase() + t.slice(1); };
-const PRAISE = [
-  '¡Muy bien, {n}! 🌟', '¡Eres la mejor cocinera, {n}! 👩‍🍳', '¡Genial, {n}! 🎉', '¡Qué rico, {n}! 😋',
-  '¡Miau, perfecto, {n}! 😺', '¡Bravo, {n}! 👏', '¡Qué lista eres, {n}! 🧠', '¡Eres una chef increíble, {n}! 💖',
-  '¡Lo hiciste genial, {n}! ⭐', '¡{n}, qué talento! 🌈'
+// Elogios: solo algunas veces (al azar) llevan su nombre, para que no suene repetitivo
+const PRAISE_NAMED = [
+  '¡Muy bien, {n}! 🌟', '¡Eres la mejor cocinera, {n}! 👩‍🍳', '¡Genial, {n}! 🎉', '¡Qué lista eres, {n}! 🧠',
+  '¡Eres una chef increíble, {n}! 💖', '¡Lo hiciste genial, {n}! ⭐', '¡{n}, qué talento! 🌈', '¡Miau, perfecto, {n}! 😺'
 ];
-const praise = () => pick(PRAISE).replace('{n}', NAME() || 'chef');
+const PRAISE_PLAIN = ['¡Muy bien! 🌟', '¡Genial! 🎉', '¡Qué rico! 😋', '¡Miau, perfecto! 😺', '¡Bravo! 👏', '¡Qué bien cocinas! 👩‍🍳', '¡Lo lograste! ⭐', '¡Excelente! 🌈'];
+const praise = () => (NAME() && Math.random() < 0.3) ? pick(PRAISE_NAMED).replace(/\{n\}/g, NAME()) : pick(PRAISE_PLAIN);
 
 function show(name) {
   Object.entries(screens).forEach(([k, s]) => s.classList.toggle('active', k === name));
@@ -528,7 +528,7 @@ const Game = {
     this.currentText = step.text;
     showBubble(step.text, '');
     setCat(guide, null);
-    Voice.say(withName(step.voice));
+    Voice.say(step.voice);
     step.init(stage, this);
   },
 
@@ -584,7 +584,7 @@ const Game = {
     }
     Sound.tada();
     this.later(() => Sound.meowOk(), 450);
-    Voice.say((NAME() ? '¡Felicidades, ' + NAME() + '! ' : '') + rec.winVoice);
+    Voice.say((NAME() && Math.random() < 0.5 ? '¡Felicidades, ' + NAME() + '! ' : '') + rec.winVoice);
     Progress.data[this.recipe] = (Progress.data[this.recipe] || 0) + 1;
     Progress.save(); renderRecipeCards();
   }
