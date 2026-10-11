@@ -6,39 +6,19 @@
    ========================================================= */
 const COOKIE_STEPS = [
 
-  /* 1. Ingredientes: tocar los correctos (el calcetin es una trampa graciosa) */
-  {
-    text: '🌾 🍬 🧈  ¡Échalos al tazón!',
-    voice: 'Toca la harina, el azúcar y la mantequilla, y échalos al tazón.',
-    init(st, G) {
-      const items = [
-        { k: 'harina', e: '🌾', ok: true }, { k: 'calcetin', e: '🧦', ok: false },
-        { k: 'azucar', e: '🍬', ok: true }, { k: 'mantequilla', e: '🧈', ok: true }
-      ];
-      st.innerHTML = '<div class="shelf"></div><div class="bowl"><div class="bowl-fill"></div></div>';
-      const shelf = $('.shelf', st), bowl = $('.bowl', st), fill = $('.bowl-fill', st);
-      let got = 0;
-      items.forEach((it) => {
-        const b = el('button', 'item ' + it.k, it.e);
-        b.addEventListener('click', () => {
-          if (b.disabled) return;
-          if (!it.ok) {
-            b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong');
-            G.bad('¡Eso no es para galletas! 🧦');
-            return;
-          }
-          b.disabled = true;
-          Sound.pop();
-          fly(b, bowl, () => {
-            Sound.plop(); got++;
-            fill.className = 'bowl-fill lvl' + got;
-            if (got === 3) G.done();
-          });
-        });
-        shelf.appendChild(b);
-      });
-    }
-  },
+  /* 1. Ingredientes (con cantidades en nivel 2 y 3): el calcetin es una trampa graciosa */
+  makeIngredients({
+    text: '🌾 🧂 🧈 🍫  ¡Al tazón!',
+    voice: 'Toca la harina, el azúcar, la mantequilla y las chispas de chocolate para echarlos al tazón. ¡El calcetín no!',
+    container: 'bowl', fillColor: '#f1d9a0',
+    items: [
+      { k: 'a', e: '🌾', l: 'harina', ok: true, bg: '#fff7de' },
+      { k: 'b', e: '🧦', l: 'calcetín', ok: false, bg: '#e5eaff', msg: '¡Eso no es para galletas! 🧦' },
+      { k: 'c', e: '🧂', l: 'azúcar', ok: true, bg: '#ffe3ee' },
+      { k: 'd', e: '🧈', l: 'mantequilla', ok: true, bg: '#fff2b8' },
+      { k: 'e', e: '🍫', l: 'chispas', ok: true, bg: '#f1e3dc' }
+    ]
+  }),
 
   /* 2. Huevos: tocar una vez para cascar, otra para echarlo */
   {
@@ -250,7 +230,7 @@ function makeIngredients(o) {
       let total = 0, finishing = false;
       if (LV() >= 2) showBubble(o.text + '  🔢', '');
       items.forEach((it) => {
-        const b = el('button', 'item', it.e);
+        const b = el('button', 'item' + (it.l ? ' hasl' : ''), `<span class="ico">${it.e}</span>` + (it.l ? `<span class="lbl">${it.l}</span>` : ''));
         if (it.bg) b.style.background = it.bg;
         b.dataset.ok = it.ok ? '1' : '0';
         let badge = null;
@@ -315,6 +295,269 @@ function makeMix(o) {
       const up = () => { down = false; };
       zone.addEventListener('pointerup', up);
       zone.addEventListener('pointercancel', up);
+    }
+  };
+}
+
+const WHISK = '<svg viewBox="0 0 64 64" width="1em" height="1em" style="vertical-align:-0.12em"><rect x="29" y="38" width="6" height="24" rx="3" fill="#8a5a3c"/><g fill="none" stroke="#b9bfca" stroke-width="2.4" stroke-linecap="round"><ellipse cx="32" cy="22" rx="18" ry="19"/><ellipse cx="32" cy="22" rx="11" ry="19"/><ellipse cx="32" cy="22" rx="4" ry="19"/><path d="M14 22h36"/></g><rect x="27" y="36" width="10" height="7" rx="3" fill="#6b4328"/></svg>';
+
+/* Contar y calcular: contar objetos, sumar (nivel 2) y restar (nivel 3) */
+function makeCount(o) {
+  return {
+    text: '🔢 ¡Cuenta!',
+    voice: 'Vamos a contar.',
+    init(st, G) {
+      const lv = LV(), what = o.what, e = o.e;
+      const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+      let ans, q, parts = [], op = '';
+      const Q = o.m ? 'Cuántos' : 'Cuántas', QD = o.m ? 'quedan' : 'quedan';
+      if (lv === 1) { ans = rnd(3, 7); parts = [ans]; q = `¿${Q} ${what} hay?`; }
+      else if (lv === 2 || Math.random() < 0.5) { const x = lv === 2 ? rnd(1, 5) : rnd(3, 8), y = lv === 2 ? rnd(1, 5) : rnd(3, 8); parts = [x, y]; op = '+'; ans = x + y; q = `¿${Q} ${what} hay en total?`; }
+      else { const x = rnd(6, 12), y = rnd(2, 5); parts = [x, y]; op = '-'; ans = x - y; q = `Se comen ${y}. ¿${Q} ${what} ${QD}?`; }
+      const msg = '🔢 ' + q;
+      showBubble(msg, ''); Game.currentText = msg; Voice.say(withName(q));
+      st.innerHTML = `<div class="countbox"></div><div class="shelf cnums"></div>`;
+      const box = $('.countbox', st), shelf = $('.cnums', st);
+      const group = (n, gone) => { const g = el('div', 'cgroup'); for (let i = 0; i < n; i++) g.appendChild(el('span', 'cthing' + (gone && i >= n - gone ? ' gone' : ''), e)); return g; };
+      if (op === '-') { box.appendChild(group(parts[0], parts[1])); box.appendChild(el('div', 'cop', `🍴 −${parts[1]}`)); }
+      else { box.appendChild(group(parts[0])); if (parts[1]) { box.appendChild(el('div', 'cop', '➕')); box.appendChild(group(parts[1])); } }
+      const opts = new Set([ans]);
+      while (opts.size < 4) { const x = ans + rnd(-3, 3); if (x >= 0 && x !== ans) opts.add(x); }
+      shuffle([...opts]).forEach((n) => {
+        const b = el('button', 'item cnum', String(n)); b.dataset.ok = n === ans ? '1' : '0'; b.dataset.n = n;
+        b.addEventListener('click', () => {
+          if (G.finished) return;
+          if (n !== ans) { shakeEl(b); G.bad('¡Cuenta otra vez! 🔢'); return; }
+          Sound.pop(); b.classList.add('full'); G.later(() => G.done(), 250);
+        });
+        shelf.appendChild(b);
+      });
+    }
+  };
+}
+
+/* Rellenar: tocar cada pimiento la cantidad de veces que dice (ni mas ni menos) */
+function makeStuff(o) {
+  return {
+    text: o.text, voice: o.voice,
+    init(st, G) {
+      const NEED = byLv(2, 3, 4);
+      st.innerHTML = '<div class="stuffrow"></div>';
+      const row = $('.stuffrow', st); let full = 0;
+      const items = o.items || ['🫑', '🫑', '🫑'];
+      items.forEach((e) => {
+        const b = el('button', 'stuffitem', `<span class="ico">${e}</span><span class="fillbar"><i></i></span><span class="qbadge">0/${NEED}</span>`);
+        let n = 0; b.dataset.need = NEED;
+        b.addEventListener('click', () => {
+          if (G.finished) return;
+          if (n >= NEED) { shakeEl(b); G.bad('¡Ya está llena! ✋'); return; }
+          n++; Sound.plop();
+          $('i', b).style.width = n / NEED * 100 + '%'; $('.qbadge', b).textContent = n + '/' + NEED;
+          if (n >= NEED) { b.classList.add('full'); full++; if (full >= items.length) G.later(() => G.done(), 350); }
+        });
+        row.appendChild(b);
+      });
+    }
+  };
+}
+
+/* Decorar libremente (crema, chocolate, fresas, lluvia de colores) y conservar el dibujo */
+function makeDecorate(o) {
+  const cupcake = o.base === 'cupcake';
+  return {
+    text: o.text || '🎨 ¡Decora tu torta!',
+    voice: o.voice || 'Elige crema, chocolate, fresas o lluvia de colores y decora tu torta como quieras. Cuando termines toca el visto.',
+    init(st, G) {
+      const NEED = byLv(2, 3, 4);
+      st.innerHTML = `<canvas class="decor" width="300" height="180"></canvas>
+        <div class="tools"><button class="tool sel" data-t="cream">🍦</button><button class="tool" data-t="choc">🍫</button><button class="tool" data-t="straw">🍓</button><button class="tool" data-t="rain">🌈</button><button class="tool" data-t="clear">🧽</button></div>
+        <div class="decor-foot"><div class="needdots"></div><button class="roundbtn ok" id="decOk" disabled>✅</button></div>`;
+      const cv = $('.decor', st), cx = cv.getContext('2d');
+      const base = () => {
+        cx.clearRect(0, 0, 300, 180);
+        if (cupcake) {
+          cx.fillStyle = '#f7b7d2'; cx.beginPath(); cx.moveTo(60, 100); cx.lineTo(240, 100); cx.lineTo(214, 176); cx.lineTo(86, 176); cx.closePath(); cx.fill();
+          cx.strokeStyle = '#e48fb4'; cx.lineWidth = 4; for (let x = 82; x < 230; x += 22) { cx.beginPath(); cx.moveTo(x, 104); cx.lineTo(150 + (x - 150) * 0.78, 174); cx.stroke(); }
+          cx.fillStyle = '#e9b36b'; cx.beginPath(); cx.ellipse(150, 98, 98, 58, 0, Math.PI, 0); cx.fill();
+        } else {
+          cx.fillStyle = '#e0a45f'; cx.beginPath(); cx.roundRect(4, 56, 292, 120, 18); cx.fill();
+          cx.fillStyle = '#c98a45'; cx.fillRect(4, 128, 292, 6);
+          cx.fillStyle = '#8a5a3c'; cx.beginPath(); cx.roundRect(0, 150, 300, 30, [0, 0, 16, 16]); cx.fill();
+          cx.fillStyle = '#fff6e6'; cx.beginPath(); cx.roundRect(4, 22, 292, 58, 20); cx.fill();
+        }
+      };
+      base();
+      const used = new Set(); const dots = $('.needdots', st), ok = $('#decOk', st);
+      const paint = () => {
+        dots.innerHTML = ''; for (let i = 0; i < NEED; i++) dots.appendChild(el('span', 'pdot' + (i < used.size ? ' on' : '')));
+        ok.disabled = used.size < NEED; ok.classList.toggle('glow', used.size >= NEED);
+      };
+      paint();
+      let tool = 'cream', down = false, lastP = null;
+      $$('.tool', st).forEach((b) => b.addEventListener('click', () => {
+        if (b.dataset.t === 'clear') { base(); used.clear(); paint(); Sound.swoosh(); return; }
+        tool = b.dataset.t; $$('.tool', st).forEach((x) => x.classList.toggle('sel', x === b)); Sound.pop();
+      }));
+      const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 300 / r.width, y: (e.clientY - r.top) * 180 / r.height }; };
+      const mark = (p) => {
+        if (tool === 'cream') {
+          cx.strokeStyle = '#ffd3e4'; cx.lineWidth = 20; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo((lastP || p).x, (lastP || p).y); cx.lineTo(p.x, p.y); cx.stroke();
+          cx.strokeStyle = '#fff'; cx.lineWidth = 11; cx.beginPath(); cx.moveTo((lastP || p).x, (lastP || p).y); cx.lineTo(p.x, p.y); cx.stroke();
+        } else if (tool === 'choc') {
+          cx.strokeStyle = '#5b3420'; cx.lineWidth = 9; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo((lastP || p).x, (lastP || p).y); cx.lineTo(p.x, p.y); cx.stroke();
+        } else if (tool === 'rain') {
+          for (let i = 0; i < 6; i++) {
+            const a = Math.random() * Math.PI * 2, d = Math.random() * 34;
+            cx.save(); cx.translate(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d); cx.rotate(Math.random() * 3.14);
+            cx.fillStyle = pick(['#ff5a8a', '#ffd23f', '#4fc3f7', '#7ed957', '#b46cff', '#ff9a3c']); cx.fillRect(-6, -2, 12, 4); cx.restore();
+          }
+        }
+        lastP = p;
+      };
+      cv.addEventListener('pointerdown', (e) => {
+        if (G.finished) return;
+        down = true; lastP = null; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* nada */ }
+        const p = pos(e);
+        if (tool === 'straw') { cx.font = '40px serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('🍓', p.x, p.y); Sound.plop(); down = false; }
+        else mark(p);
+        if (!used.has(tool)) { used.add(tool); paint(); }
+      });
+      cv.addEventListener('pointermove', (e) => { if (down && !G.finished) { mark(pos(e)); if (tool === 'rain' && Math.random() < 0.15) Sound.salt(); } });
+      const up = () => { down = false; lastP = null; };
+      cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+      ok.addEventListener('click', () => {
+        if (G.finished || ok.disabled) return;
+        if (!cupcake) { try { Game.art = cv.toDataURL('image/png'); } catch (err) { Game.art = null; } }
+        Sound.pop(); G.done();
+      });
+    }
+  };
+}
+
+/* Presentacion final: elegir mantel y plato, poner pegatinas y mostrar el plato para ella */
+function makePresent(o) {
+  return {
+    text: '🌟 ¡Prepara la presentación!',
+    voice: 'Elige el mantel, el plato y las pegatinas para presentar tu plato. Cuando termines toca el visto.',
+    init(st, G) {
+      const food = Game.art && o.useArt ? `<span class="foodart" style="background-image:url(${Game.art})"></span>` : `<span class="foodemoji">${o.emoji}</span>`;
+      st.innerHTML = `<div class="table" style="--cloth:#ffd6e7"><div class="banner">${NAME() ? '¡Para ' + NAME() + '! 💖' : '¡Buen provecho! 💖'}</div>
+          <div class="plate p0">${food}</div><div class="stickers"></div></div>
+        <div class="swatches"></div>
+        <div class="swatches plates"></div>
+        <div class="swatches stk"></div>
+        <div class="decor-foot"><button class="roundbtn" id="stUndo">↩️</button><button class="roundbtn ok glow" id="presOk">✅</button></div>`;
+      const table = $('.table', st), plate = $('.plate', st), layer = $('.stickers', st);
+      ['#ffd6e7', '#cfe8ff', '#d8f7d4', '#fff0b8', '#e8d8ff', '#ffd9b3'].forEach((c) => {
+        const b = el('button', 'swatch'); b.style.background = c; b.addEventListener('click', () => { table.style.setProperty('--cloth', c); Sound.pop(); }); $('.swatches', st).appendChild(b);
+      });
+      ['p0', 'p1', 'p2', 'p3'].forEach((cl, i) => {
+        const b = el('button', 'swatch plate-sw ' + cl, ''); b.addEventListener('click', () => { plate.className = 'plate ' + cl; Sound.pop(); }); $('.plates', st).appendChild(b);
+      });
+      let sel = '🌸';
+      ['🌸', '⭐', '🎈', '💖', '🦋', '🍀', '🌈', '✨'].forEach((s, i) => {
+        const b = el('button', 'sticker-btn' + (i === 0 ? ' sel' : ''), s);
+        b.addEventListener('click', () => { sel = s; $$('.sticker-btn', st).forEach((x) => x.classList.toggle('sel', x === b)); Sound.pop(); });
+        $('.stk', st).appendChild(b);
+      });
+      const placed = [];
+      table.addEventListener('pointerdown', (e) => {
+        if (G.finished || placed.length >= 14) return;
+        const r = table.getBoundingClientRect();
+        const s = el('span', 'sticker', sel); s.style.left = (e.clientX - r.left) + 'px'; s.style.top = (e.clientY - r.top) + 'px';
+        layer.appendChild(s); placed.push(s); Sound.sparkle();
+      });
+      $('#stUndo', st).addEventListener('click', () => { const s = placed.pop(); if (s) s.remove(); });
+      $('#presOk', st).addEventListener('click', () => {
+        if (G.finished) return;
+        Game.presentHTML = table.outerHTML;
+        Sound.pop(); G.done();
+      });
+    }
+  };
+}
+
+
+function makeWash(o) {
+  return {
+    text: '🧽 ¡Frota para lavar!',
+    voice: o.voice || 'Pasa tu dedo por las verduras para quitar la suciedad.',
+    init(st, G) {
+      const veg = o.veg;
+      const spots = [[22, 30], [68, 26], [45, 62], [74, 68], [26, 70]];
+      st.innerHTML = '<div class="washzone"><div class="washrow"></div><div class="spoon">🧽</div></div><div class="meter"><div></div></div>';
+      const zone = $('.washzone', st), row = $('.washrow', st), sponge = $('.spoon', st), bar = $('.meter > div', st);
+      const dirt = [];
+      veg.forEach((v, vi) => {
+        const t = el('div', 'veg', v);
+        for (let i = 0; i < 3; i++) {
+          const d = el('span', 'dirt');
+          const s = spots[(vi * 2 + i) % spots.length];
+          d.style.left = s[0] + '%'; d.style.top = s[1] + '%';
+          t.appendChild(d); dirt.push(d);
+        }
+        row.appendChild(t);
+      });
+      const TOTAL = dirt.length; let clean = 0, down = false;
+      const scrub = (e) => {
+        const zr = zone.getBoundingClientRect();
+        sponge.style.left = (e.clientX - zr.left) + 'px'; sponge.style.top = (e.clientY - zr.top) + 'px';
+        dirt.forEach((d) => {
+          if (d.dataset.gone) return;
+          const r = d.getBoundingClientRect();
+          if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < 36) {
+            d.dataset.gone = '1'; d.classList.add('gone'); Sound.bloop(); clean++;
+            const fx = el('span', 'fx', '💧'); fx.style.left = (r.left - zr.left) + 'px'; fx.style.top = (r.top - zr.top) + 'px'; zone.appendChild(fx);
+            setTimeout(() => fx.remove(), 700);
+            bar.style.width = clean / TOTAL * 100 + '%';
+            if (clean >= TOTAL) { down = false; G.done(); }
+          }
+        });
+      };
+      zone.addEventListener('pointerdown', (e) => { down = true; try { zone.setPointerCapture(e.pointerId); } catch (err) { /* nada */ } scrub(e); });
+      zone.addEventListener('pointermove', (e) => { if (down && !G.finished) scrub(e); });
+      const up = () => { down = false; };
+      zone.addEventListener('pointerup', up);
+      zone.addEventListener('pointercancel', up);
+    }
+  };
+}
+
+function makeSwipeCut(o) {
+  return {
+    text: '🔪 ¡Desliza para cortar!',
+    voice: o.voice,
+    init(st, G) {
+      const tiles = o.tiles;
+      st.innerHTML = '<div class="cutzone"><div class="cutgrid"></div><div class="spoon">🔪</div></div>';
+      const zone = $('.cutzone', st), grid = $('.cutgrid', st), knife = $('.spoon', st);
+      const els = tiles.map((t) => { const d = el('div', 'tile', `<span class="whole">${t.e}</span>`); grid.appendChild(d); return d; });
+      const NEED = tiles.filter((t) => t.ok).length; let cut = 0, a = null, b = null;
+      zone.addEventListener('pointerdown', (e) => { a = { x: e.clientX, y: e.clientY }; b = a; try { zone.setPointerCapture(e.pointerId); } catch (err) { /* nada */ } });
+      zone.addEventListener('pointermove', (e) => {
+        if (!a) return; b = { x: e.clientX, y: e.clientY };
+        const r = zone.getBoundingClientRect(); knife.style.left = (e.clientX - r.left) + 'px'; knife.style.top = (e.clientY - r.top) + 'px';
+      });
+      const end = () => {
+        if (!a || G.finished) { a = null; return; }
+        const len = Math.hypot(b.x - a.x, b.y - a.y);
+        let hitAny = false, hitTrap = false;
+        tiles.forEach((t, i) => {
+          if (els[i].dataset.cut) return;
+          if (!segHitsRect(a, b, els[i].getBoundingClientRect(), 0)) return;
+          hitAny = true;
+          if (!t.ok) { hitTrap = true; shakeEl(els[i]); return; }
+          els[i].dataset.cut = '1';
+          els[i].innerHTML = `<span class="half l">${t.e}</span><span class="half r">${t.e}</span>`;
+          els[i].classList.add('cut'); Sound.chop(); cut++;
+        });
+        if (hitTrap) G.bad(o.trapMsg || '¡No cortes eso! 🙀');
+        else if (!hitAny && len > 40) G.bad('¡Pasa el cuchillo por las verduras! 🔪');
+        if (cut >= NEED) G.done();
+        a = null;
+      };
+      zone.addEventListener('pointerup', end);
+      zone.addEventListener('pointercancel', () => { a = null; });
     }
   };
 }
@@ -647,87 +890,12 @@ const PIZZA_STEPS = [
    ========================================================= */
 const SALAD_STEPS = [
 
-  /* 1. Lavar: frotar con el dedo para quitar la suciedad */
-  {
-    text: '🧽 ¡Frota para lavar!',
-    voice: 'Pasa tu dedo por las verduras para quitar la suciedad.',
-    init(st, G) {
-      const veg = ['🥬', '🍅', '🥕'];
-      const spots = [[22, 30], [68, 26], [45, 62], [74, 68], [26, 70]];
-      st.innerHTML = '<div class="washzone"><div class="washrow"></div><div class="spoon">🧽</div></div><div class="meter"><div></div></div>';
-      const zone = $('.washzone', st), row = $('.washrow', st), sponge = $('.spoon', st), bar = $('.meter > div', st);
-      const dirt = [];
-      veg.forEach((v, vi) => {
-        const t = el('div', 'veg', v);
-        for (let i = 0; i < 3; i++) {
-          const d = el('span', 'dirt');
-          const s = spots[(vi * 2 + i) % spots.length];
-          d.style.left = s[0] + '%'; d.style.top = s[1] + '%';
-          t.appendChild(d); dirt.push(d);
-        }
-        row.appendChild(t);
-      });
-      const TOTAL = dirt.length; let clean = 0, down = false;
-      const scrub = (e) => {
-        const zr = zone.getBoundingClientRect();
-        sponge.style.left = (e.clientX - zr.left) + 'px'; sponge.style.top = (e.clientY - zr.top) + 'px';
-        dirt.forEach((d) => {
-          if (d.dataset.gone) return;
-          const r = d.getBoundingClientRect();
-          if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < 36) {
-            d.dataset.gone = '1'; d.classList.add('gone'); Sound.bloop(); clean++;
-            const fx = el('span', 'fx', '💧'); fx.style.left = (r.left - zr.left) + 'px'; fx.style.top = (r.top - zr.top) + 'px'; zone.appendChild(fx);
-            setTimeout(() => fx.remove(), 700);
-            bar.style.width = clean / TOTAL * 100 + '%';
-            if (clean >= TOTAL) { down = false; G.done(); }
-          }
-        });
-      };
-      zone.addEventListener('pointerdown', (e) => { down = true; try { zone.setPointerCapture(e.pointerId); } catch (err) { /* nada */ } scrub(e); });
-      zone.addEventListener('pointermove', (e) => { if (down && !G.finished) scrub(e); });
-      const up = () => { down = false; };
-      zone.addEventListener('pointerup', up);
-      zone.addEventListener('pointercancel', up);
-    }
-  },
+  makeWash({ veg: ['🥬', '🍅', '🥕'] }),
 
-  /* 2. Cortar: deslizar el dedo por encima de cada verdura (¡no el zapato!) */
-  {
-    text: '🔪 ¡Desliza para cortar!',
-    voice: 'Desliza tu dedo sobre cada verdura para cortarla. ¡El zapato no!',
-    init(st, G) {
-      const tiles = [{ e: '🥕', ok: true }, { e: '🥒', ok: true }, { e: '👟', ok: false }, { e: '🍅', ok: true }];
-      st.innerHTML = '<div class="cutzone"><div class="cutgrid"></div><div class="spoon">🔪</div></div>';
-      const zone = $('.cutzone', st), grid = $('.cutgrid', st), knife = $('.spoon', st);
-      const els = tiles.map((t) => { const d = el('div', 'tile', `<span class="whole">${t.e}</span>`); grid.appendChild(d); return d; });
-      const NEED = tiles.filter((t) => t.ok).length; let cut = 0, a = null, b = null;
-      zone.addEventListener('pointerdown', (e) => { a = { x: e.clientX, y: e.clientY }; b = a; try { zone.setPointerCapture(e.pointerId); } catch (err) { /* nada */ } });
-      zone.addEventListener('pointermove', (e) => {
-        if (!a) return; b = { x: e.clientX, y: e.clientY };
-        const r = zone.getBoundingClientRect(); knife.style.left = (e.clientX - r.left) + 'px'; knife.style.top = (e.clientY - r.top) + 'px';
-      });
-      const end = () => {
-        if (!a || G.finished) { a = null; return; }
-        const len = Math.hypot(b.x - a.x, b.y - a.y);
-        let hitAny = false, hitTrap = false;
-        tiles.forEach((t, i) => {
-          if (els[i].dataset.cut) return;
-          if (!segHitsRect(a, b, els[i].getBoundingClientRect(), 0)) return;
-          hitAny = true;
-          if (!t.ok) { hitTrap = true; shakeEl(els[i]); return; }
-          els[i].dataset.cut = '1';
-          els[i].innerHTML = `<span class="half l">${t.e}</span><span class="half r">${t.e}</span>`;
-          els[i].classList.add('cut'); Sound.chop(); cut++;
-        });
-        if (hitTrap) G.bad('¡No cortes el zapato! 👟');
-        else if (!hitAny && len > 40) G.bad('¡Pasa el cuchillo por las verduras! 🔪');
-        if (cut >= NEED) G.done();
-        a = null;
-      };
-      zone.addEventListener('pointerup', end);
-      zone.addEventListener('pointercancel', () => { a = null; });
-    }
-  },
+  makeSwipeCut({
+    tiles: [{ e: '🥕', ok: true }, { e: '🥒', ok: true }, { e: '👟', ok: false }, { e: '🍅', ok: true }],
+    voice: 'Desliza tu dedo sobre cada verdura para cortarla. ¡El zapato no!', trapMsg: '¡No cortes el zapato! 👟'
+  }),
 
   /* 3. Al tazon: arrastrar (o tocar) las verduras; el peluche no va */
   {
@@ -779,10 +947,10 @@ const SALAD_STEPS = [
 
   /* 4. Aliño: mantener presionado y soltar en la zona verde */
   makeHoldPour({
-    text: '🍯 ¡Mantén presionado!',
-    voice: 'Mantén presionada la botella y suelta cuando el aliño llegue a la zona verde.',
-    bottle: '🍯', color: '#f2b02e', vesselClass: 'jar', zone: [0.45, 0.8],
-    hint: '¡Un poquito más! 🍯', spill: '¡Uy, mucho aliño! 💦'
+    text: '🫒 ¡Mantén presionado!',
+    voice: 'Mantén presionada la botella de aceite de oliva y suelta cuando llegue a la zona verde.',
+    bottle: '🫒', color: '#c9b834', vesselClass: 'jar', zone: [0.45, 0.8],
+    hint: '¡Un poquito más de aceite! 🫒', spill: '¡Uy, mucho aceite! 💦'
   }),
 
   /* 5. Mezclar la ensalada */
@@ -806,10 +974,10 @@ const SOUP_STEPS = [
     voice: 'Toca la zanahoria, la papa y la cebolla para echarlas a la olla.',
     container: 'pot', fillColor: '#f6b85a',
     items: [
-      { k: 'a', e: '🥕', ok: true, bg: '#ffe9d0' },
-      { k: 'b', e: '🍫', ok: false, bg: '#f1e3dc', msg: '¡El chocolate no va en la sopa! 🍫' },
-      { k: 'c', e: '🥔', ok: true, bg: '#fff3d6' },
-      { k: 'd', e: '🧅', ok: true, bg: '#f7e8f3' }
+      { k: 'a', e: '🥕', l: 'zanahoria', ok: true, bg: '#ffe9d0' },
+      { k: 'b', e: '🍫', l: 'chocolate', ok: false, bg: '#f1e3dc', msg: '¡El chocolate no va en la sopa! 🍫' },
+      { k: 'c', e: '🥔', l: 'papa', ok: true, bg: '#fff3d6' },
+      { k: 'd', e: '🧅', l: 'cebolla', ok: true, bg: '#f7e8f3' }
     ]
   }),
 
@@ -885,7 +1053,7 @@ function makeBlow(o) {
         <button class="blow-eat">${o.eat || '🥄'}</button></div>`;
       const wrap = $('.blow', st), plate = $('.blow-plate', st), fill = $('.blow-fill', st), micRow = $('.blow-mic', st),
         mfill = $('.micfill', st), btn = $('.blow-btn', st), eat = $('.blow-eat', st);
-      const COOL_MS = o.coolMs || 2000;
+      const COOL_MS = o.coolMs || 1100;
       let t = 1, cool = false, alive = true, held = false, det = null, quiet = 0, hinted = false, last = performance.now(), raf = 0;
       G.onCleanup(() => { alive = false; cancelAnimationFrame(raf); Mic.close(); });
 
@@ -1045,6 +1213,14 @@ function makeMemory(o) {
   };
 }
 
+/* Torta para las velas: usa la torta que decoro la niña (si existe) */
+function cakeHTML(big, withFlames) {
+  const inner = Game.art
+    ? `<div class="cakeart" style="background-image:url(${Game.art})"></div>`
+    : '<div class="cake-top"></div><div class="cake-mid"></div><div class="cake-bot"></div>';
+  return `<div class="cakebox${big ? ' big' : ''}${Game.art ? ' art' : ''}">${withFlames ? '<div class="flames"></div>' : ''}<div class="candles"></div>${inner}</div>`;
+}
+
 /* Velas: contar y poner exactamente las que pide el pastel */
 function makeCandleCount() {
   return {
@@ -1054,7 +1230,7 @@ function makeCandleCount() {
       const N = byLv(5, 3 + Math.floor(Math.random() * 6), 4 + Math.floor(Math.random() * 6));
       showBubble(`🕯️ ¡Pon ${N} velas!`, ''); Game.currentText = `🕯️ ¡Pon ${N} velas!`;
       Voice.say(`Pon ${N} velas en la torta y luego toca el visto.`);
-      st.innerHTML = `<div class="bignum" data-n="${N}">${N}</div><div class="cakebox"><div class="candles"></div><div class="cake-top"></div><div class="cake-mid"></div><div class="cake-bot"></div></div>
+      st.innerHTML = `<div class="bignum" data-n="${N}">${N}</div>${cakeHTML(false, false)}
         <div class="candlerow"><button class="roundbtn" id="candUndo">↩️</button><button class="item candbtn">🕯️</button><button class="roundbtn ok" id="candOk">✅</button></div>`;
       const row = $('.candles', st); let n = 0;
       const paint = () => { row.innerHTML = ''; for (let i = 0; i < n; i++) row.appendChild(el('span', 'cand', '🕯️')); };
@@ -1076,7 +1252,7 @@ function makeBlowCandles() {
     voice: 'Pide un deseo y sopla hacia el celular para apagar todas las velas.',
     init(st, G) {
       const N = byLv(5, 6, 7);
-      st.innerHTML = `<div class="blow"><div class="cakebox big"><div class="flames"></div><div class="candles"></div><div class="cake-top"></div><div class="cake-mid"></div><div class="cake-bot"></div></div>
+      st.innerHTML = `<div class="blow">${cakeHTML(true, true)}
         <div class="blow-mic"><span>🎤</span><div class="micmeter"><div class="micfill"></div></div></div><button class="blow-btn" hidden>💨</button></div>`;
       const wrap = $('.blow', st), flames = $('.flames', st), candles = $('.candles', st), micRow = $('.blow-mic', st), mfill = $('.micfill', st), btn = $('.blow-btn', st);
       const fl = [];
@@ -1098,7 +1274,7 @@ function makeBlowCandles() {
         const b = m.blowing || held;
         wrap.classList.toggle('blowing', b);
         mfill.style.width = Math.round(m.level * 100) + '%'; mfill.classList.toggle('on', m.blowing);
-        if (b) p = Math.min(1, p + dt / (byLv(1800, 2400, 3000)));
+        if (b) p = Math.min(1, p + dt / (byLv(1000, 1400, 1800)));
         const should = Math.floor(p * N + 1e-6);
         while (out < should) { fl[out].classList.add('out'); out++; Sound.pop(); }
         if (out >= N) { Mic.close(); G.later(() => G.done(), 450); return; }
@@ -1123,10 +1299,10 @@ const PASTA_STEPS = [
     voice: 'Toca los espaguetis, la sal y el aceite para echarlos a la olla.',
     container: 'pot', fillColor: '#f3d68a',
     items: [
-      { k: 'a', e: '🍝', ok: true, bg: '#fff3d6' },
-      { k: 'b', e: '🧦', ok: false, bg: '#e5eaff', msg: '¡El calcetín no va en la olla! 🧦' },
-      { k: 'c', e: '🧂', ok: true, bg: '#eef2f5' },
-      { k: 'd', e: '🫒', ok: true, bg: '#eaf3d3' }
+      { k: 'a', e: '🍝', l: 'espagueti', ok: true, bg: '#fff3d6' },
+      { k: 'b', e: '🧦', l: 'calcetín', ok: false, bg: '#e5eaff', msg: '¡El calcetín no va en la olla! 🧦' },
+      { k: 'c', e: '🧂', l: 'sal', ok: true, bg: '#eef2f5' },
+      { k: 'd', e: '🫒', l: 'aceite', ok: true, bg: '#eaf3d3' }
     ]
   }),
   makeBubbles({ voice: 'Toca las burbujas del agua para reventarlas. ¡Las burbujas de fuego no!' }),
@@ -1157,22 +1333,22 @@ const COCOA_STEPS = [
     hint: '¡Un poquito más de leche! 🥛', spill: '¡Uy, se derramó la leche! 💦'
   }),
   makeIngredients({
-    text: '🍫 🍯 🥄  ¡A la olla!',
-    voice: 'Toca el chocolate y la miel para echarlos a la olla. ¡Cuidado con la cebolla!',
+    text: '🍫 🫘 🍯  ¡A la olla!',
+    voice: 'Toca el chocolate, el cacao y la miel para echarlos a la olla. ¡La cebolla no!',
     container: 'pot', fillColor: '#8a5a3c',
     items: [
-      { k: 'a', e: '🍫', ok: true, bg: '#f1e3dc' },
-      { k: 'b', e: '🧅', ok: false, bg: '#f7e8f3', msg: '¡La cebolla no va en el chocolate! 🧅' },
-      { k: 'c', e: '🍯', ok: true, bg: '#fff0c4' },
-      { k: 'd', e: '🥄', ok: true, bg: '#eef2f5' }
+      { k: 'a', e: '🍫', l: 'chocolate', ok: true, bg: '#f1e3dc' },
+      { k: 'b', e: '🧅', l: 'cebolla', ok: false, bg: '#f7e8f3', msg: '¡La cebolla no va en el chocolate! 🧅' },
+      { k: 'c', e: '🫘', l: 'cacao', ok: true, bg: '#efe0d6' },
+      { k: 'd', e: '🍯', l: 'miel', ok: true, bg: '#fff0c4' }
     ]
   }),
   makeMix({
-    text: '🥄 ¡Gira para mezclar!',
-    voice: 'Gira tu dedo dentro de la olla para mezclar el chocolate.',
+    text: '🥣 ¡Bate con el batidor!',
+    voice: 'Gira tu dedo dentro de la olla para batir el chocolate con el batidor.',
     bowlClass: 'pot-round', spill: '¡Uy, salpica el chocolate! 💦',
     inner: '<div class="mixinner soupmix"><span>🍫</span><span>🥛</span><span>🍫</span><span>🍯</span><span>🥛</span></div>',
-    spinSel: '.mixinner', spoon: '🥄', laps: 3
+    spinSel: '.mixinner', spoon: WHISK, laps: 3
   }),
   makeBake({
     text: '🔔 ¡Toca cuando suene!',
@@ -1182,14 +1358,14 @@ const COCOA_STEPS = [
   }),
   makeBlow({ food: '☕', eat: '👄', hot: '¡Quema! Sopla primero 🔥', voice: 'El chocolate está muy caliente. Sopla hacia el celular para enfriarlo y luego toca la boquita.' }),
   makeIngredients({
-    text: '☁️ 🍬  ¡Para decorar!',
-    voice: 'Toca las nubecitas y los caramelos para decorar tu chocolate. ¡El brócoli no!',
+    text: '☁️ 🍫 🍪  ¡Para decorar!',
+    voice: 'Toca los malvaviscos, las virutas de chocolate y la galleta para decorar tu chocolate. ¡El brócoli no!',
     container: 'bowl', fillColor: '#fff',
     items: [
-      { k: 'a', e: '☁️', ok: true, bg: '#eef6ff' },
-      { k: 'b', e: '🥦', ok: false, bg: '#e3f4dc', msg: '¡El brócoli no va en el chocolate! 🥦' },
-      { k: 'c', e: '🍬', ok: true, bg: '#ffe3ee' },
-      { k: 'd', e: '⭐', ok: true, bg: '#fff7c9' }
+      { k: 'a', e: '☁️', l: 'malvaviscos', ok: true, bg: '#eef6ff' },
+      { k: 'b', e: '🥦', l: 'brócoli', ok: false, bg: '#e3f4dc', msg: '¡El brócoli no va en el chocolate! 🥦' },
+      { k: 'c', e: '🍫', l: 'virutas', ok: true, bg: '#f1e3dc' },
+      { k: 'd', e: '🍪', l: 'galleta', ok: true, bg: '#fff0d6' }
     ]
   })
 ];
@@ -1199,26 +1375,27 @@ const COCOA_STEPS = [
    ========================================================= */
 const PANCAKE_STEPS = [
   makeIngredients({
-    text: '🥚 🥛 🌾  ¡Al tazón!',
-    voice: 'Toca el huevo, la leche y la harina para echarlos al tazón. ¡El osito no!',
+    text: '🌾 🥚 🥛 🧈  ¡Al tazón!',
+    voice: 'Toca la harina, los huevos, la leche y la mantequilla para echarlos al tazón. ¡El osito no!',
     container: 'bowl', fillColor: '#f6dca0',
     items: [
-      { k: 'a', e: '🥚', ok: true, bg: '#fff7de' },
-      { k: 'b', e: '🧸', ok: false, bg: '#f4e3d3', msg: '¡El osito no va en la masa! 🧸' },
-      { k: 'c', e: '🥛', ok: true, bg: '#eef6ff' },
-      { k: 'd', e: '🌾', ok: true, bg: '#fff3d6' }
+      { k: 'a', e: '🌾', l: 'harina', ok: true, bg: '#fff3d6' },
+      { k: 'b', e: '🧸', l: 'osito', ok: false, bg: '#f4e3d3', msg: '¡El osito no va en la masa! 🧸' },
+      { k: 'c', e: '🥚', l: 'huevos', ok: true, bg: '#fff7de' },
+      { k: 'd', e: '🥛', l: 'leche', ok: true, bg: '#eef6ff' },
+      { k: 'e', e: '🧈', l: 'mantequilla', ok: true, bg: '#fff2b8' }
     ]
   }),
   makeMix({
-    text: '🥄 ¡Gira para mezclar!',
-    voice: 'Gira tu dedo dentro del tazón para mezclar la masa.',
+    text: '🥣 ¡Bate con el batidor!',
+    voice: 'Gira tu dedo dentro del tazón para batir la masa con el batidor.',
     bowlClass: '', spill: '¡Uy, se sale la masa! 💦',
     inner: '<div class="mixinner salad"><span>🥚</span><span>🥛</span><span>🌾</span><span>🥚</span><span>🥛</span></div>',
-    spinSel: '.mixinner', spoon: '🥄', laps: 3
+    spinSel: '.mixinner', spoon: WHISK, laps: 3
   }),
   makeFlip({
     text: '🥞 ¡Desliza hacia arriba!',
-    voice: 'Cuando el panqueque esté dorado, desliza tu dedo hacia arriba para voltearlo. ¡Dos veces!'
+    voice: 'Cuando el panqueque esté dorado, desliza tu dedo hacia arriba para voltearlo.'
   }),
   makeHoldPour({
     text: '🍯 ¡Mantén presionado!',
@@ -1227,14 +1404,14 @@ const PANCAKE_STEPS = [
     hint: '¡Un poquito más de miel! 🍯', spill: '¡Uy, mucha miel! 💦'
   }),
   makeIngredients({
-    text: '🍓 🍌  ¡Fruta encima!',
+    text: '🍓 🍌 🫐  ¡Fruta encima!',
     voice: 'Toca la fresa, el plátano y los arándanos para ponerlos encima. ¡El zapato no!',
     container: 'bowl', fillColor: '#ffd9a8',
     items: [
-      { k: 'a', e: '🍓', ok: true, bg: '#ffe3e3' },
-      { k: 'b', e: '👟', ok: false, bg: '#e5eaff', msg: '¡El zapato no es fruta! 👟' },
-      { k: 'c', e: '🍌', ok: true, bg: '#fff7c9' },
-      { k: 'd', e: '🫐', ok: true, bg: '#e8e6ff' }
+      { k: 'a', e: '🍓', l: 'fresa', ok: true, bg: '#ffe3e3' },
+      { k: 'b', e: '👟', l: 'zapato', ok: false, bg: '#e5eaff', msg: '¡El zapato no es fruta! 👟' },
+      { k: 'c', e: '🍌', l: 'plátano', ok: true, bg: '#fff7c9' },
+      { k: 'd', e: '🫐', l: 'arándanos', ok: true, bg: '#e8e6ff' }
     ]
   })
 ];
@@ -1243,7 +1420,7 @@ const PANCAKE_STEPS = [
    HAMBURGUESA 🍔
    ========================================================= */
 const BURGER_STEPS = [
-  SALAD_STEPS[0],                                               // lavar las verduras
+  makeWash({ veg: ['🥬', '🍅', '🧅'] }),                          // lavar las verduras
   makeBake({
     text: '🔔 ¡Toca cuando suene!',
     voice: 'Espera a que suene el timbre y saca la carne.',
@@ -1265,40 +1442,55 @@ const BURGER_STEPS = [
     hint: '¡Un poquito más de kétchup! 🍅', spill: '¡Uy, mucho kétchup! 💦'
   }),
   makeIngredients({
-    text: '🍟 🥤  ¡Para acompañar!',
-    voice: 'Toca las papas fritas, el refresco y la sal para acompañar. ¡El chocolate no!',
+    text: '🥔 🫒 🧂  ¡Papas fritas!',
+    voice: 'Toca las papas, el aceite y la sal para hacer papas fritas. ¡El chocolate no!',
     container: 'bowl', fillColor: '#ffe08a',
     items: [
-      { k: 'a', e: '🍟', ok: true, bg: '#fff3d6' },
-      { k: 'b', e: '🍫', ok: false, bg: '#f1e3dc', msg: '¡El chocolate no va con la hamburguesa! 🍫' },
-      { k: 'c', e: '🥤', ok: true, bg: '#ffe3e3' },
-      { k: 'd', e: '🧂', ok: true, bg: '#eef2f5' }
+      { k: 'a', e: '🥔', l: 'papas', ok: true, bg: '#fff3d6' },
+      { k: 'b', e: '🍫', l: 'chocolate', ok: false, bg: '#f1e3dc', msg: '¡El chocolate no va con las papas! 🍫' },
+      { k: 'c', e: '🫒', l: 'aceite', ok: true, bg: '#eaf3d3' },
+      { k: 'd', e: '🧂', l: 'sal', ok: true, bg: '#eef2f5' }
     ]
   })
 ];
+
+/* Masa de pastel/cupcake: primero los ingredientes secos y despues los humedos (como en la vida real) */
+const dryStep = (what) => makeIngredients({
+  text: '🌾 🧂 🫙  ¡Ingredientes secos!',
+  voice: `Toca la harina, el azúcar y el polvo de hornear para echarlos al tazón. ¡El calcetín no!`,
+  container: 'bowl', fillColor: '#f6e6c4',
+  items: [
+    { k: 'a', e: '🌾', l: 'harina', ok: true, bg: '#fff7de' },
+    { k: 'b', e: '🧦', l: 'calcetín', ok: false, bg: '#e5eaff', msg: `¡El calcetín no va en ${what}! 🧦` },
+    { k: 'c', e: '🧂', l: 'azúcar', ok: true, bg: '#ffe3ee' },
+    { k: 'd', e: '🫙', l: 'polvo de hornear', ok: true, bg: '#eef2f5' }
+  ]
+});
+const wetStep = (what) => makeIngredients({
+  text: '🥚 🥛 🧈  ¡Ingredientes húmedos!',
+  voice: `Ahora toca los huevos, la leche y la mantequilla para echarlos al tazón. ¡El pescado no!`,
+  container: 'bowl', fillColor: '#f6dca0',
+  items: [
+    { k: 'a', e: '🥚', l: 'huevos', ok: true, bg: '#fff7de' },
+    { k: 'b', e: '🐟', l: 'pescado', ok: false, bg: '#e5eaff', msg: `¡El pescado no va en ${what}! 🐟` },
+    { k: 'c', e: '🥛', l: 'leche', ok: true, bg: '#eef6ff' },
+    { k: 'd', e: '🧈', l: 'mantequilla', ok: true, bg: '#fff2b8' }
+  ]
+});
+const whiskStep = (voice) => makeMix({
+  text: '🥣 ¡Bate con el batidor!', voice,
+  bowlClass: '', spill: '¡Uy, se sale la masa! 💦',
+  inner: '<div class="mixinner salad"><span>🥚</span><span>🥛</span><span>🌾</span><span>🥚</span><span>🥛</span></div>',
+  spinSel: '.mixinner', spoon: WHISK, laps: 3
+});
 
 /* =========================================================
    CUPCAKES 🧁
    ========================================================= */
 const CUPCAKE_STEPS = [
-  makeIngredients({
-    text: '🥚 🥛 🌾  ¡Al tazón!',
-    voice: 'Toca el huevo, la leche y la harina para echarlos al tazón. ¡El calcetín no!',
-    container: 'bowl', fillColor: '#f6dca0',
-    items: [
-      { k: 'a', e: '🥚', ok: true, bg: '#fff7de' },
-      { k: 'b', e: '🧦', ok: false, bg: '#e5eaff', msg: '¡El calcetín no va en la masa! 🧦' },
-      { k: 'c', e: '🥛', ok: true, bg: '#eef6ff' },
-      { k: 'd', e: '🌾', ok: true, bg: '#fff3d6' }
-    ]
-  }),
-  makeMix({
-    text: '🥄 ¡Gira para mezclar!',
-    voice: 'Gira tu dedo dentro del tazón para mezclar la masa.',
-    bowlClass: '', spill: '¡Uy, se sale la masa! 💦',
-    inner: '<div class="mixinner salad"><span>🥚</span><span>🥛</span><span>🌾</span><span>🥚</span><span>🥛</span></div>',
-    spinSel: '.mixinner', spoon: '🥄', laps: 3
-  }),
+  dryStep('los cupcakes'),
+  wetStep('los cupcakes'),
+  whiskStep('Gira tu dedo dentro del tazón para batir la masa con el batidor.'),
   makeBake({
     text: '🔔 ¡Toca cuando suene!',
     voice: 'Espera a que suene el timbre y saca los cupcakes.',
@@ -1311,41 +1503,16 @@ const CUPCAKE_STEPS = [
     bottle: '🍦', color: '#ffb6d5', vesselClass: 'jar', zone: [0.45, 0.8],
     hint: '¡Un poquito más de crema! 🍦', spill: '¡Uy, mucha crema! 💦'
   }),
-  makeIngredients({
-    text: '🍬 🍓 ⭐  ¡A decorar!',
-    voice: 'Toca los caramelos, la fresa y la estrella para decorar. ¡La cebolla no!',
-    container: 'bowl', fillColor: '#ffc2dc',
-    items: [
-      { k: 'a', e: '🍬', ok: true, bg: '#ffe3ee' },
-      { k: 'b', e: '🧅', ok: false, bg: '#f7e8f3', msg: '¡La cebolla no va en el cupcake! 🧅' },
-      { k: 'c', e: '🍓', ok: true, bg: '#ffe3e3' },
-      { k: 'd', e: '⭐', ok: true, bg: '#fff7c9' }
-    ]
-  })
+  makeDecorate({ base: 'cupcake', text: '🎨 ¡Decora tu cupcake!', voice: 'Elige crema, chocolate, fresas o lluvia de colores y decora tu cupcake como quieras. Cuando termines toca el visto.' })
 ];
 
 /* =========================================================
    TORTA 🎂
    ========================================================= */
 const CAKE_STEPS = [
-  makeIngredients({
-    text: '🥚 🥛 🌾  ¡Al tazón!',
-    voice: 'Toca el huevo, la leche y la harina para echarlos al tazón. ¡El pescado no!',
-    container: 'bowl', fillColor: '#f6dca0',
-    items: [
-      { k: 'a', e: '🥚', ok: true, bg: '#fff7de' },
-      { k: 'b', e: '🐟', ok: false, bg: '#e5eaff', msg: '¡El pescado no va en la torta! 🐟' },
-      { k: 'c', e: '🥛', ok: true, bg: '#eef6ff' },
-      { k: 'd', e: '🌾', ok: true, bg: '#fff3d6' }
-    ]
-  }),
-  makeMix({
-    text: '🥄 ¡Gira para mezclar!',
-    voice: 'Gira tu dedo dentro del tazón para mezclar la masa de la torta.',
-    bowlClass: '', spill: '¡Uy, se sale la masa! 💦',
-    inner: '<div class="mixinner salad"><span>🥚</span><span>🥛</span><span>🌾</span><span>🥚</span><span>🥛</span></div>',
-    spinSel: '.mixinner', spoon: '🥄', laps: 3
-  }),
+  dryStep('la torta'),
+  wetStep('la torta'),
+  whiskStep('Gira tu dedo dentro del tazón para batir la masa de la torta con el batidor.'),
   makeHoldPour({
     text: '🥣 ¡Mantén presionado!',
     voice: 'Mantén presionada la masa y suelta cuando llegue a la zona verde del molde.',
@@ -1364,26 +1531,97 @@ const CAKE_STEPS = [
     bottle: '🍦', color: '#ffb6d5', vesselClass: 'jar', zone: [0.45, 0.8],
     hint: '¡Un poquito más de crema! 🍦', spill: '¡Uy, mucha crema! 💦'
   }),
-  makeIngredients({
-    text: '🍓 🍒 ⭐  ¡A decorar!',
-    voice: 'Toca la fresa, la cereza y la estrella para decorar. ¡El brócoli no!',
-    container: 'bowl', fillColor: '#ffc2dc',
-    items: [
-      { k: 'a', e: '🍓', ok: true, bg: '#ffe3e3' },
-      { k: 'b', e: '🥦', ok: false, bg: '#e3f4dc', msg: '¡El brócoli no va en la torta! 🥦' },
-      { k: 'c', e: '🍒', ok: true, bg: '#ffe0e6' },
-      { k: 'd', e: '⭐', ok: true, bg: '#fff7c9' }
-    ]
-  }),
+  makeDecorate({ base: 'cake' }),
   makeCandleCount(),
   makeBlowCandles()
 ];
 
+/* =========================================================
+   SOPA DE TOMATE 🍅
+   ========================================================= */
+const TOMATO_STEPS = [
+  makeWash({ veg: ['🍅', '🧅', '🧄'], voice: 'Pasa tu dedo por los tomates, la cebolla y el ajo para quitar la suciedad.' }),
+  makeSwipeCut({
+    tiles: [{ e: '🍅', ok: true }, { e: '🧅', ok: true }, { e: '👟', ok: false }, { e: '🧄', ok: true }],
+    voice: 'Desliza tu dedo sobre cada verdura para cortarla. ¡El zapato no!', trapMsg: '¡No cortes el zapato! 👟'
+  }),
+  makeIngredients({
+    text: '🍅 🧅 🧄 🫒  ¡A la olla!',
+    voice: 'Toca los tomates, la cebolla, el ajo y el aceite para echarlos a la olla. ¡El chocolate no!',
+    container: 'pot', fillColor: '#e8553f',
+    items: [
+      { k: 'a', e: '🍅', l: 'tomates', ok: true, bg: '#ffe3e3' },
+      { k: 'b', e: '🍫', l: 'chocolate', ok: false, bg: '#f1e3dc', msg: '¡El chocolate no va en la sopa! 🍫' },
+      { k: 'c', e: '🧅', l: 'cebolla', ok: true, bg: '#f7e8f3' },
+      { k: 'd', e: '🧄', l: 'ajo', ok: true, bg: '#f4f1e8' },
+      { k: 'e', e: '🫒', l: 'aceite', ok: true, bg: '#eaf3d3' }
+    ]
+  }),
+  makeBubbles({ voice: 'Toca las burbujas de la sopa de tomate para reventarlas. ¡Las burbujas de fuego no!' }),
+  makeMix({
+    text: '🥄 ¡Gira para revolver!',
+    voice: 'Gira tu dedo dentro de la olla para revolver la sopa de tomate.',
+    bowlClass: 'pot-round', spill: '¡Uy, salpica la sopa! 💦',
+    inner: '<div class="mixinner soupmix"><span>🍅</span><span>🧅</span><span>🍅</span><span>🧄</span><span>🍅</span></div>',
+    spinSel: '.mixinner', spoon: '🥄', laps: 3
+  }),
+  SOUP_STEPS[4],                                                // la sal (exacta)
+  makeBlow({ food: '🍅', eat: '🥄', voice: 'La sopa de tomate está muy caliente. Sopla hacia el celular para enfriarla y luego toca la cuchara.' })
+];
+
+/* =========================================================
+   PIMIENTOS RELLENOS 🫑
+   ========================================================= */
+const PEPPER_STEPS = [
+  makeWash({ veg: ['🫑', '🍅', '🧅'], voice: 'Pasa tu dedo por los pimientos, el tomate y la cebolla para quitar la suciedad.' }),
+  makeSwipeCut({
+    tiles: [{ e: '🧅', ok: true }, { e: '🍅', ok: true }, { e: '🧦', ok: false }, { e: '🫑', ok: true }],
+    voice: 'Desliza tu dedo sobre cada verdura para cortarla. ¡El calcetín no!', trapMsg: '¡No cortes el calcetín! 🧦'
+  }),
+  makeIngredients({
+    text: '🍚 🍅 🧅 🧀  ¡Al tazón!',
+    voice: 'Toca el arroz, el tomate, la cebolla y el queso para echarlos al tazón. ¡El osito no!',
+    container: 'bowl', fillColor: '#f4e2b8',
+    items: [
+      { k: 'a', e: '🍚', l: 'arroz', ok: true, bg: '#f7f3ea' },
+      { k: 'b', e: '🧸', l: 'osito', ok: false, bg: '#f4e3d3', msg: '¡El osito no va en el relleno! 🧸' },
+      { k: 'c', e: '🍅', l: 'tomate', ok: true, bg: '#ffe3e3' },
+      { k: 'd', e: '🧅', l: 'cebolla', ok: true, bg: '#f7e8f3' },
+      { k: 'e', e: '🧀', l: 'queso', ok: true, bg: '#fff7c9' }
+    ]
+  }),
+  makeMix({
+    text: '🥄 ¡Gira para mezclar!',
+    voice: 'Gira tu dedo dentro del tazón para mezclar el relleno.',
+    bowlClass: '', spill: '¡Uy, se sale el relleno! 💦',
+    inner: '<div class="mixinner salad"><span>🍚</span><span>🍅</span><span>🧅</span><span>🧀</span><span>🍚</span></div>',
+    spinSel: '.mixinner', spoon: '🥄', laps: 3
+  }),
+  makeStuff({
+    text: '🫑 ¡Rellena cada pimiento!',
+    voice: 'Toca cada pimiento las veces que dice el número para rellenarlo. ¡Ni más ni menos!'
+  }),
+  makeBake({
+    text: '🔔 ¡Toca cuando suene!',
+    voice: 'Espera a que suene el timbre y saca los pimientos del horno.',
+    tray: '<span class="bake-emoji">🫑</span><span class="bake-emoji">🫑</span>',
+    burnt: '¡Uy, se quemaron un poquito! 💨'
+  }),
+  makeBlow({ food: '🫑', eat: '🍴', voice: 'Los pimientos están muy calientes. Sopla hacia el celular para enfriarlos y luego toca el tenedor.' })
+];
+
 // Memoria: ingredientes de cada receta (para el paso "memoriza", nivel 2 y 3)
 const MEM = {
-  cookies: ['🌾', '🍬', '🧈'], pizza: ['🍅', '🧀', '🍄'], salad: ['🥬', '🍅', '🥕'], soup: ['🥕', '🥔', '🧅'],
+  cookies: ['🌾', '🧈', '🍫'], pizza: ['🍅', '🧀', '🍄'], salad: ['🥬', '🍅', '🥕'], soup: ['🥕', '🥔', '🧅'],
   pasta: ['🍝', '🧂', '🫒'], cocoa: ['🍫', '🥛', '🍯'], pancakes: ['🥚', '🥛', '🌾'], burger: ['🥩', '🧀', '🥬'],
-  cupcakes: ['🥚', '🥛', '🌾'], cake: ['🥚', '🍫', '🥛']
+  cupcakes: ['🥚', '🥛', '🌾'], cake: ['🌾', '🥚', '🧈'], tomato: ['🍅', '🧅', '🧄'], peppers: ['🫑', '🍚', '🧀']
+};
+// Contar y calcular al final de cada receta (m = nombre masculino)
+const COUNT = {
+  cookies: { e: '🍪', what: 'galletas' }, pizza: { e: '🍕', what: 'porciones' }, salad: { e: '🍅', what: 'tomates', m: 1 },
+  soup: { e: '🥕', what: 'zanahorias' }, pasta: { e: '🍅', what: 'tomates', m: 1 }, cocoa: { e: '☁️', what: 'malvaviscos', m: 1 },
+  pancakes: { e: '🥞', what: 'panqueques', m: 1 }, burger: { e: '🍔', what: 'hamburguesas' }, cupcakes: { e: '🧁', what: 'cupcakes', m: 1 },
+  cake: { e: '🍓', what: 'fresas' }, tomato: { e: '🍅', what: 'tomates', m: 1 }, peppers: { e: '🫑', what: 'pimientos', m: 1 }
 };
 
 /* =========================================================
@@ -1435,6 +1673,16 @@ const RECIPES = {
     winTitle: '¡Hamburguesa lista!', winVoice: '¡Hamburguesa lista! ¡Qué rica!',
     result(box) { ['🍔', '🍟', '🥤', '🍔'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
   },
+  tomato: {
+    emoji: '🍅', name: 'Sopa de tomate', steps: TOMATO_STEPS,
+    winTitle: '¡Sopa de tomate lista!', winVoice: '¡Sopa de tomate lista! ¡Qué rica!',
+    result(box) { ['🍅', '🧅', '🧄', '🍅'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
+  peppers: {
+    emoji: '🫑', name: 'Pimientos rellenos', steps: PEPPER_STEPS,
+    winTitle: '¡Pimientos listos!', winVoice: '¡Pimientos rellenos listos! ¡Qué ricos!',
+    result(box) { ['🫑', '🧀', '🍅', '🫑'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
   cake: {
     emoji: '🎂', name: 'Torta', steps: CAKE_STEPS,
     winTitle: '¡Torta lista!', winVoice: '¡Torta lista! ¡Feliz cumpleaños!',
@@ -1447,5 +1695,9 @@ const RECIPES = {
   }
 };
 
-// El paso de memoria va primero en cada receta (solo se usa en nivel 2 y 3)
-Object.keys(MEM).forEach((k) => RECIPES[k].steps.unshift(makeMemory({ items: MEM[k] })));
+// Al final de cada receta: contar/calcular y presentar el plato; al principio (nivel 2 y 3): memorizar la receta
+Object.keys(MEM).forEach((k) => {
+  RECIPES[k].steps.push(makeCount(COUNT[k]));
+  RECIPES[k].steps.push(makePresent({ emoji: RECIPES[k].emoji, useArt: k === 'cake' }));
+  RECIPES[k].steps.unshift(makeMemory({ items: MEM[k] }));
+});

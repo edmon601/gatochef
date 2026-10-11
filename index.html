@@ -48,10 +48,24 @@
       </div>
     </section>
 
+    <!-- PUERTA PARA PAPAS -->
+    <div id="gate" class="settings" hidden>
+      <div class="settings-box">
+        <h3>Solo para papás 🔒</h3>
+        <p>Resuelve para entrar a los ajustes:</p>
+        <div id="gateQ" class="gate-q"></div>
+        <div id="gateOpts" class="gate-opts"></div>
+        <button id="gateCancel" class="settings-close">Cancelar</button>
+      </div>
+    </div>
+
     <!-- AJUSTES (para papás: mantener presionado el engranaje) -->
     <div id="settings" class="settings" hidden>
       <div class="settings-box">
         <h3>Ajustes para papás</h3>
+        <label>Nombre de la niña (la voz le habla por su nombre)
+          <input id="setName" type="text" maxlength="20" autocomplete="off" style="font-size:18px;padding:8px;border-radius:10px;border:2px solid #ddd">
+        </label>
         <label>Volumen
           <input id="setVolume" type="range" min="0.1" max="1" step="0.05">
         </label>
@@ -59,7 +73,7 @@
         <label class="check"><input id="setStress" type="checkbox"> Maullido de gato estresado al equivocarse</label>
         <label class="check"><input id="setMic" type="checkbox"> 🎤 Usar el micrófono para soplar</label>
         <label>Sensibilidad del soplido
-          <input id="setSens" type="range" min="0.5" max="8" step="0.25">
+          <input id="setSens" type="range" min="0.5" max="12" step="0.5">
         </label>
         <button id="btnTestMic" class="settings-test">🎤 Probar micrófono (sopla hacia el celular)</button>
         <div id="micMeter" class="micmeter" hidden><div id="micFill" class="micfill"></div></div>

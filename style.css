@@ -407,3 +407,63 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .stackshelf .item { font-size: clamp(34px, 11vw, 54px); }
 .seqrow { gap: 4px; font-size: clamp(20px, 6vw, 30px); max-width: 96vw; }
 .seqdot { padding: 3px 4px; }
+
+/* ---------- Puerta para papas ---------- */
+#gate { z-index: 110; }
+.gate-q { font-size: 40px; font-weight: 800; text-align: center; color: var(--brown); }
+.gate-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.gate-opt { font-size: 32px; font-weight: 800; padding: 14px; border-radius: 16px; background: #fff3dc; box-shadow: 0 5px 0 var(--cream-dark); }
+.gear { opacity: .55; }
+
+/* ---------- Etiquetas, contar, rellenar, decorar, presentar ---------- */
+.item.hasl { flex-direction: column; gap: 2px; }
+.item.hasl .ico { font-size: clamp(44px, 14vw, 70px); line-height: 1; }
+.item .lbl { font-size: 14px; font-weight: 800; color: var(--brown); line-height: 1.1; text-align: center; padding: 0 4px; }
+.shelf.six .item.hasl .ico { font-size: clamp(34px, 10.5vw, 52px); }
+.countbox { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; width: min(94%, 420px); padding: 14px; background: #fff; border-radius: 26px; box-shadow: 0 6px 0 var(--cream-dark); }
+.cgroup { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 150px; }
+.cthing { font-size: clamp(30px, 9vw, 40px); line-height: 1.1; }
+.cthing.gone { opacity: .28; filter: grayscale(1); text-decoration: line-through; }
+.cop { font-size: 28px; font-weight: 800; color: var(--orange); }
+.cnums { grid-template-columns: repeat(4, 1fr); width: min(94%, 400px); gap: 8px; }
+.cnum { font-size: clamp(34px, 11vw, 52px); font-weight: 800; color: var(--brown); aspect-ratio: 1; }
+.stuffrow { display: flex; gap: 10px; justify-content: center; }
+.stuffitem { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px 30px; border-radius: 22px; background: #fff; box-shadow: 0 6px 0 var(--cream-dark); width: min(28vw, 120px); }
+.stuffitem .ico { font-size: clamp(54px, 17vw, 76px); line-height: 1; }
+.stuffitem.full { background: #d8f7d4; }
+.fillbar { width: 80%; height: 12px; border-radius: 8px; background: #eee; overflow: hidden; }
+.fillbar i { display: block; height: 100%; width: 0; background: #f4b34f; transition: width .15s; }
+.stuffitem .qbadge { right: 50%; transform: translateX(50%); bottom: 6px; }
+canvas.decor { width: min(88vw, 340px); height: auto; aspect-ratio: 300 / 180; background: #fff8ec; border-radius: 22px; box-shadow: 0 6px 0 var(--cream-dark); touch-action: none; }
+.tools { display: flex; gap: 8px; }
+.tool { font-size: 34px; width: 58px; height: 58px; border-radius: 18px; background: #fff; box-shadow: 0 4px 0 var(--cream-dark); line-height: 1; }
+.tool.sel { background: #ffe6a8; outline: 3px solid var(--orange); }
+.decor-foot { display: flex; align-items: center; gap: 18px; }
+.needdots { display: flex; gap: 8px; }
+.roundbtn:disabled { opacity: .4; }
+.glow { animation: pulse 1s ease-in-out infinite; }
+.table { position: relative; width: min(86vw, 320px); height: min(60vw, 230px); border-radius: 24px; background: var(--cloth, #ffd6e7); box-shadow: 0 6px 0 rgba(0,0,0,.12); overflow: hidden; touch-action: none;
+  background-image: radial-gradient(circle at 12px 12px, rgba(255,255,255,.45) 5px, transparent 6px); background-size: 24px 24px; }
+.banner { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: 22px; font-weight: 800; color: var(--brown); text-shadow: 0 2px 0 rgba(255,255,255,.7); }
+.plate { position: absolute; left: 50%; top: 56%; width: 62%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.15), inset 0 0 0 8px #f1f1f1; display: flex; align-items: center; justify-content: center; }
+.plate.p1 { background: #cfe8ff; box-shadow: 0 6px 0 rgba(0,0,0,.15), inset 0 0 0 8px #8cc4f5; }
+.plate.p2 { background: #fff3b0; box-shadow: 0 6px 0 rgba(0,0,0,.15), inset 0 0 0 8px #f2c94c; }
+.plate.p3 { background: #3a3a48; box-shadow: 0 6px 0 rgba(0,0,0,.25), inset 0 0 0 8px #565668; }
+.foodemoji { font-size: clamp(56px, 18vw, 84px); line-height: 1; }
+.foodart { width: 86%; aspect-ratio: 300 / 180; background-size: 100% 100%; border-radius: 10px; }
+.stickers { position: absolute; inset: 0; pointer-events: none; }
+.sticker { position: absolute; font-size: 30px; line-height: 1; transform: translate(-50%, -50%); animation: drop .25s ease-out; }
+.swatches { display: flex; gap: 8px; align-items: center; }
+.swatch { width: 38px; height: 38px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 3px 0 rgba(0,0,0,.18); }
+.plate-sw { background: #fff; } .plate-sw.p1 { background: #cfe8ff; } .plate-sw.p2 { background: #fff3b0; } .plate-sw.p3 { background: #3a3a48; }
+.sticker-btn { font-size: 28px; width: 42px; height: 42px; border-radius: 12px; background: #fff; box-shadow: 0 3px 0 var(--cream-dark); line-height: 1; }
+.sticker-btn.sel { background: #ffe6a8; outline: 2px solid var(--orange); }
+.win-cookies.pres .table { transform: scale(.78); transform-origin: top center; margin-bottom: -44px; pointer-events: none; }
+.cakebox.art { height: 114px; }
+.cakebox.big.art { height: min(45.6vw, 168px); }
+.cakeart { position: absolute; inset: 0; background-size: 100% 100%; border-radius: 14px; box-shadow: 0 6px 0 rgba(0,0,0,.15); }
+.cakebox.art .candles { top: -30px; }
+.cakebox.art .flames { top: -60px; }
+.swatches { flex-wrap: wrap; justify-content: center; max-width: 94vw; gap: 6px; }
+.sticker-btn { width: min(42px, 10.5vw); height: min(42px, 10.5vw); font-size: min(28px, 7vw); }
+.swatch { width: min(38px, 9.5vw); height: min(38px, 9.5vw); }

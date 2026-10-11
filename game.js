@@ -4,8 +4,9 @@
    Sin publicidad, sin internet, sin compras, sin enlaces.
    ========================================================= */
 
-const APP_VERSION = '6';
+const APP_VERSION = '7';
 const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const LV = () => Math.max(1, Math.min(3, +Settings.data.level || 2));            // dificultad 1 facil, 2 chef, 3 maestro
 const byLv = (a, b, c) => [a, b, c][LV() - 1];
@@ -15,8 +16,14 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 
 /* ---------------- Ajustes y progreso (se guardan en el celular) ---------------- */
 const Settings = {
-  data: { volume: 0.8, voice: true, stress: true, muted: false, mic: true, micGain: 2.5, badVol: 0.35, level: 2 },
-  load() { try { Object.assign(this.data, JSON.parse(localStorage.getItem('gatochef.settings') || '{}')); } catch (e) { /* sin almacenamiento */ } },
+  data: { volume: 0.8, voice: true, stress: true, muted: false, mic: true, micGain: 4.5, badVol: 0.35, level: 2, name: 'Adaia', ver: 7 },
+  load() {
+    try {
+      const o = JSON.parse(localStorage.getItem('gatochef.settings') || '{}');
+      if ((o.ver || 0) < 7) delete o.micGain;                    // v7: el micrófono ahora es mas sensible por defecto
+      Object.assign(this.data, o); this.data.ver = 7;
+    } catch (e) { /* sin almacenamiento */ }
+  },
   save() { try { localStorage.setItem('gatochef.settings', JSON.stringify(this.data)); } catch (e) { /* nada */ } }
 };
 const Progress = {
@@ -373,11 +380,11 @@ const Mic = (() => {
         frames++;
         if (floor === null) floor = rms;
         else if (rms < floor) floor = floor * 0.8 + rms * 0.2;
-        const gain = Math.max(0.5, Math.min(8, Settings.data.micGain || 2.5));
-        const thr = Math.max(0.0035 / gain, floor * (1 + 2.6 / gain));        // mas "gain" = detecta soplidos mas suaves
+        const gain = Math.max(0.5, Math.min(12, Settings.data.micGain || 4.5));
+        const thr = Math.max(0.0013, 0.0035 / gain, floor * (1 + 2.6 / gain));        // mas "gain" = detecta soplidos mas suaves
         if (rms >= floor) floor += (rms - floor) * (rms < thr ? 0.004 : 0.0004);   // un soplido largo casi no sube el ruido de fondo
         const cand = frames > 15 && rms > thr && low > 0.4 && flat > 0.2;
-        hold = cand ? hold + dt : Math.max(0, hold - dt * 2);
+        hold = cand ? hold + dt : Math.max(0, hold - dt);
         return { blowing: hold > 70, level: Math.min(1, rms / (thr * 3)), rms, low, flat, thr };
       }
     };
@@ -470,7 +477,15 @@ const screens = { home: $('#home'), game: $('#game'), win: $('#win') };
 const stage = $('#stage');
 const bubble = $('#bubble');
 const guide = $('#catGuide');
-const PRAISE = ['¡Muy bien! 🌟', '¡Genial! 🎉', '¡Qué rico! 😋', '¡Miau, perfecto! 😺', '¡Bravo! 👏'];
+const NAME = () => (Settings.data.name || '').trim();
+// "Adaia, toca la zanahoria..." (la voz le habla por su nombre)
+const withName = (t) => { const n = NAME(); if (!n || !t) return t; return n + ', ' + t.charAt(0).toLowerCase() + t.slice(1); };
+const PRAISE = [
+  '¡Muy bien, {n}! 🌟', '¡Eres la mejor cocinera, {n}! 👩‍🍳', '¡Genial, {n}! 🎉', '¡Qué rico, {n}! 😋',
+  '¡Miau, perfecto, {n}! 😺', '¡Bravo, {n}! 👏', '¡Qué lista eres, {n}! 🧠', '¡Eres una chef increíble, {n}! 💖',
+  '¡Lo hiciste genial, {n}! ⭐', '¡{n}, qué talento! 🌈'
+];
+const praise = () => pick(PRAISE).replace('{n}', NAME() || 'chef');
 
 function show(name) {
   Object.entries(screens).forEach(([k, s]) => s.classList.toggle('active', k === name));
@@ -486,7 +501,7 @@ const Game = {
   steps() { return RECIPES[this.recipe].steps.filter((s) => (s.minLevel || 1) <= LV()); },
 
   start(recipe) {
-    this.token++; this.idx = 0;
+    this.token++; this.idx = 0; this.art = null; this.presentHTML = null;
     this.recipe = recipe || this.recipe;
     show('game'); buildDots();
     this.runStep();
@@ -513,7 +528,7 @@ const Game = {
     this.currentText = step.text;
     showBubble(step.text, '');
     setCat(guide, null);
-    Voice.say(step.voice);
+    Voice.say(withName(step.voice));
     step.init(stage, this);
   },
 
@@ -540,7 +555,7 @@ const Game = {
     Sound.tada();
     setCat(guide, 'happy', 1500);
     animCat(guide, 'jump');
-    const p = pick(PRAISE);
+    const p = praise();
     showBubble(p, 'good');
     Voice.say(p.replace(/[^\p{L}\s¡!¿?,]/gu, ''));
     this.later(() => {
@@ -556,9 +571,9 @@ const Game = {
     setCat($('#winCat'), 'happy');
     animCat($('#winCat'), 'jump');
     const rec = RECIPES[this.recipe];
-    $('.win-title').textContent = rec.winTitle;
+    $('.win-title').textContent = rec.winTitle + (NAME() ? ' 💖 ' + NAME() : '');
     const wc = $('#winCookies'); wc.innerHTML = '';
-    rec.result(wc);
+    if (this.presentHTML) { wc.innerHTML = this.presentHTML; wc.classList.add('pres'); } else { wc.classList.remove('pres'); rec.result(wc); }
     const conf = $('#confetti'); conf.innerHTML = '';
     for (let i = 0; i < 32; i++) {
       const s = el('span', '', pick(['⭐', '🎉', rec.emoji, '✨', '💖']));
@@ -569,7 +584,7 @@ const Game = {
     }
     Sound.tada();
     this.later(() => Sound.meowOk(), 450);
-    Voice.say(rec.winVoice);
+    Voice.say((NAME() ? '¡Felicidades, ' + NAME() + '! ' : '') + rec.winVoice);
     Progress.data[this.recipe] = (Progress.data[this.recipe] || 0) + 1;
     Progress.save(); renderRecipeCards();
   }
@@ -652,10 +667,31 @@ function setupSettings() {
   };
   $('#btnTestMeow').addEventListener('click', () => { Sound.resume(); setTimeout(() => { Sound.testBad(); paintDiag(); }, 60); });
   paintDiag();
-  // Para que no lo abra la peque: hay que mantener presionado el engranaje
-  const gear = $('#btnGear'); let timer = null;
-  gear.addEventListener('pointerdown', () => { timer = setTimeout(() => { paintDiag(); box.hidden = false; }, 1200); });
+  // Nombre de la niña
+  const nameIn = $('#setName');
+  nameIn.value = Settings.data.name || '';
+  nameIn.addEventListener('input', () => { Settings.data.name = nameIn.value.trim(); Settings.save(); });
+  // Engranaje: un toque abre una pregunta de papás (una multiplicación); mantenerlo presionado 1 s abre directo
+  const gear = $('#btnGear'), gate = $('#gate'), gq = $('#gateQ'), go = $('#gateOpts');
+  const openSettings = () => { paintDiag(); gate.hidden = true; box.hidden = false; };
+  const openGate = () => {
+    const a = 3 + Math.floor(Math.random() * 7), b = 3 + Math.floor(Math.random() * 7), ans = a * b;
+    gq.textContent = `${a} × ${b} = ?`;
+    const opts = new Set([ans]);
+    while (opts.size < 4) { const o = ans + (Math.floor(Math.random() * 13) - 6); if (o > 0) opts.add(o); }
+    go.innerHTML = '';
+    shuffle([...opts]).forEach((o) => {
+      const bt = el('button', 'gate-opt', String(o));
+      bt.addEventListener('click', () => { if (o === ans) openSettings(); else { gq.textContent = 'Casi… prueba otra vez 🙂'; setTimeout(openGate, 700); } });
+      go.appendChild(bt);
+    });
+    gate.hidden = false;
+  };
+  $('#gateCancel').addEventListener('click', () => { gate.hidden = true; });
+  let timer = null, long = false;
+  gear.addEventListener('pointerdown', () => { long = false; timer = setTimeout(() => { long = true; openSettings(); }, 1200); });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => gear.addEventListener(ev, () => clearTimeout(timer)));
+  gear.addEventListener('click', () => { if (long) { long = false; return; } Sound.resume(); openGate(); });
 }
 
 function boot() {

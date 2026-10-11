@@ -5,7 +5,7 @@ externos y sin pedir ningún dato. Una vez instalado funciona sin internet.
 
 ## Qué hace el juego
 
-Un gatito chef naranja guía a la niña para cocinar **10 recetas**, cada una con sus propios minijuegos.
+Un gatito chef naranja guía a la niña para cocinar **12 recetas**, cada una con sus propios minijuegos.
 Todas están abiertas desde el inicio (sin bloqueos, para que nunca se frustre).
 
 | Receta | Minijuegos |
@@ -18,7 +18,9 @@ Todas están abiertas desde el inicio (sin bloqueos, para que nunca se frustre).
 | ☕ **Chocolate caliente** (6) | Servir la leche · ingredientes (¡la cebolla no!) · mezclar · calentar y sacar cuando suene · **💨 soplar para enfriar** · decorar (¡el brócoli no!) |
 | 🥞 **Panqueques** (5) | Ingredientes (¡el osito no!) · mezclar · **voltear deslizando hacia arriba** cuando esté dorado (2 veces) · miel · fruta (¡el zapato no!) |
 | 🍔 **Hamburguesa** (5) | Lavar verduras · cocinar la carne · **apilar en orden** (pan, carne, queso, lechuga, pan) · kétchup · papitas y refresco |
-| 🎂 **Torta** (8) | Ingredientes (¡el pescado no!) · mezclar · llenar el molde · hornear · crema · decorar · **poner las velas contando** (ni más ni menos) · **💨 soplar las velas con el micrófono** |
+| 🎂 **Torta** (9+) | Ingredientes secos (harina, azúcar, polvo de hornear) · ingredientes húmedos (huevos, leche, mantequilla) · **batir con batidor** · llenar el molde · hornear · crema · **decorar libremente** (crema, chocolate, fresas, lluvia de colores) · **poner las velas contando** · **💨 soplar las velas con el micrófono** |
+| 🍅 **Sopa de tomate** | Lavar · cortar · ingredientes (tomates, cebolla, ajo, aceite) · burbujas · revolver · sal exacta · 💨 soplar |
+| 🫑 **Pimientos rellenos** | Lavar · cortar · relleno (arroz, tomate, cebolla, queso) · mezclar · **rellenar cada pimiento contando** · hornear · 💨 soplar |
 | 🧁 **Cupcakes** (5) | Ingredientes (¡el calcetín no!) · mezclar · hornear · crema · decorar (¡la cebolla no!) |
 
 - Tocar al gato = maullido agradable.
@@ -39,6 +41,16 @@ Todas están abiertas desde el inicio (sin bloqueos, para que nunca se frustre).
 > Abrir `index.html` directamente desde el almacenamiento del celular NO sirve para instalarlo:
 > hace falta alojarlo en una dirección https.
 
+## 🌟 Novedades de la versión 7
+
+- **La voz y los elogios le hablan por su nombre** ("Adaia, toca la harina…", "¡Eres la mejor cocinera, Adaia!"). El nombre se cambia en Ajustes para papás.
+- **Ingredientes reales con etiqueta** (harina, azúcar, polvo de hornear, huevos, mantequilla…) y **batidor** para batir masas. Las masas de torta y cupcakes se hacen como en la vida real: primero lo seco y luego lo húmedo.
+- **Números**: al final de cada receta hay un paso de contar (nivel 1), sumar (nivel 2) o sumar/restar (nivel 3). Además las cantidades de ingredientes, las velas y las pizcas de sal piden contar.
+- **Decorar la torta y los cupcakes** con crema, chocolate, fresas y lluvia de colores; la torta decorada aparece después con las velas que hay que soplar.
+- **Presentación final** en todas las recetas: elegir mantel, plato y pegatinas; el plato presentado se ve en la pantalla de felicitación con "¡Para Adaia!".
+- **Soplar es más fácil**: detecta soplidos más suaves y hace falta soplar menos tiempo (la comida se enfría en ~1 segundo de soplido y las velas se apagan rápido).
+- **Engranaje ⚙️**: ahora un toque abre una pregunta para papás (una multiplicación). También se puede mantener presionado 1 segundo.
+
 ## 🧠 Niveles de dificultad
 
 En **Ajustes para papás → Dificultad** (por defecto **2 · Chef**):
@@ -58,19 +70,19 @@ sube despacito si deja de soplar. Cuando se enfría puede comer 🍴. Si intenta
 
 - La primera vez Chrome pide **permiso de micrófono**: papá o mamá debe tocar **Permitir**. Se recuerda para siempre.
   Si lo negó: candado junto a la dirección → Permisos → Micrófono → Permitir.
-- Muy sensible: detecta soplidos suaves (nivel 2.5 por defecto). Una vez que baja la temperatura, **la comida no se vuelve a calentar**.
+- Muy sensible: detecta soplidos suaves (nivel 4.5 por defecto). Una vez que baja la temperatura, **la comida no se vuelve a calentar**.
 - **No graba ni guarda ni envía nada**: solo mide el sonido en el momento y el micrófono se apaga al terminar el paso.
 - Si no hay micrófono o no hay permiso, aparece un botón 💨 que se mantiene presionado para "soplar".
 - Requiere HTTPS (igual que para instalarlo). Mientras el micrófono está encendido, algunos Android bajan un poco el volumen de los sonidos; es normal.
 - En Ajustes para papás: **🎤 Probar micrófono** muestra una barra en vivo y dice "💨 Soplido detectado".
-  Si a tu hija no le detecta soplidos suaves, sube **Sensibilidad del soplido** (hasta 8); si se activa con ruido de fondo, bájala.
+  Si a tu hija no le detecta soplidos suaves, sube **Sensibilidad del soplido** (hasta 12); si se activa con ruido de fondo, bájala.
   También se puede desactivar el micrófono (entonces usa el botón 💨).
 
 ## Ajustes para papás
 
-En la pantalla de inicio, **mantén presionado 1 segundo el engranaje ⚙️** (arriba a la derecha,
-casi invisible a propósito para que la niña no lo abra):
+En la pantalla de inicio, **toca el engranaje ⚙️** (arriba a la derecha) y resuelve la multiplicación, o **mantenlo presionado 1 segundo**:
 
+- Nombre de la niña
 - Volumen general y **volumen del maullido de error** (más bajo por defecto)
 - **Dificultad** (1, 2 o 3)
 - Activar o desactivar la voz que explica
@@ -99,7 +111,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
    No hace falta tener todos: los que falten usan el sonido de reemplazo.
 2. Escribe los nombres con extensión en `sounds/list.json`, por ejemplo:
    `["meow-ok-1.mp3", "meow-bad-1.mp3", "crack.wav"]` (la lista actual ya trae `meow-bad-1.mp3`; agrega los nuevos sin quitarlo)
-3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v6`; pasa a `gatochef-v7`) y agrega los archivos nuevos a la lista `CORE` para que
+3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v7`; pasa a `gatochef-v8`) y agrega los archivos nuevos a la lista `CORE` para que
    los celulares ya instalados descarguen los cambios.
 
 ## Actualizar y comprobar que tienes la versión nueva
@@ -107,7 +119,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
 1. Sube **todos** los archivos al hosting (incluido `embedded-sounds.js`).
 2. Abre la app **dos veces** (la primera descarga la versión nueva, la segunda la usa).
 3. Comprueba: en la pantalla de inicio **mantén presionado 1 segundo el engranaje ⚙️**. Abajo debe decir
-   `Versión 6 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
+   `Versión 7 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
 4. Si NO aparece la línea de "Versión" o dice otra versión, el celular sigue con archivos viejos: en Android abre
    Ajustes → Aplicaciones → Gato Chef → Almacenamiento → **Borrar caché** (y si hace falta **Borrar datos**), o desinstala y vuelve a instalar.
 
