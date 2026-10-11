@@ -117,7 +117,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
    No hace falta tener todos: los que falten usan el sonido de reemplazo.
 2. Escribe los nombres con extensión en `sounds/list.json`, por ejemplo:
    `["meow-ok-1.mp3", "meow-bad-1.mp3", "crack.wav"]` (la lista actual ya trae `meow-bad-1.mp3`; agrega los nuevos sin quitarlo)
-3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v9`; pasa a `gatochef-v10`) y agrega los archivos nuevos a la lista `CORE` para que
+3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v14`; pasa a `gatochef-v15`) y agrega los archivos nuevos a la lista `CORE` para que
    los celulares ya instalados descarguen los cambios.
 
 ## Actualizar y comprobar que tienes la versión nueva
@@ -125,7 +125,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
 1. Sube **todos** los archivos al hosting (incluido `embedded-sounds.js`).
 2. Abre la app **dos veces** (la primera descarga la versión nueva, la segunda la usa).
 3. Comprueba: en la pantalla de inicio **mantén presionado 1 segundo el engranaje ⚙️**. Abajo debe decir
-   `Versión 9 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
+   `Versión 14 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
 4. Si NO aparece la línea de "Versión" o dice otra versión, el celular sigue con archivos viejos: en Android abre
    Ajustes → Aplicaciones → Gato Chef → Almacenamiento → **Borrar caché** (y si hace falta **Borrar datos**), o desinstala y vuelve a instalar.
 

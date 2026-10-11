@@ -391,10 +391,10 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 .cake-top { position: absolute; left: 4%; right: 4%; top: 0; height: 34%; border-radius: 22px 22px 6px 6px; background: #ffd6e7; box-shadow: inset 0 -8px 0 #ffb6d5; }
 .cake-mid { position: absolute; left: 0; right: 0; top: 32%; height: 36%; background: #f6c58b; border-radius: 6px; box-shadow: inset 0 -6px 0 #e3a860; }
 .cake-bot { position: absolute; left: -4%; right: -4%; bottom: 0; height: 34%; background: #8a5a3c; border-radius: 6px 6px 18px 18px; }
-.candles { position: absolute; left: 10%; right: 10%; top: -34px; display: flex; justify-content: space-around; align-items: flex-end; }
-.cand { font-size: 30px; line-height: 1; animation: drop .25s ease-out; }
-.flames { position: absolute; left: 10%; right: 10%; top: -64px; display: flex; justify-content: space-around; z-index: 2; }
-.flame2 { font-size: 26px; line-height: 1; animation: flicker .5s ease-in-out infinite alternate; transition: opacity .3s, transform .3s; }
+.candles { position: absolute; left: 8%; right: 8%; top: -34px; display: flex; justify-content: center; align-items: flex-end; }
+.cand { flex: 1 1 0; text-align: center; font-size: var(--cs, 30px); line-height: 1; animation: drop .25s ease-out; }
+.flames { position: absolute; left: 8%; right: 8%; top: -64px; display: flex; justify-content: center; z-index: 2; }
+.flame2 { flex: 1 1 0; text-align: center; font-size: calc(var(--cs, 30px) * .87); line-height: 1; animation: flicker .5s ease-in-out infinite alternate; transition: opacity .3s, transform .3s; }
 .flame2.out { opacity: 0; transform: translateY(-14px) scale(.3); animation: none; }
 .blowing .flame2:not(.out) { animation-duration: .15s; }
 .bignum { font-size: 64px; font-weight: 800; line-height: 1; color: var(--orange); background: #fff; border-radius: 24px; padding: 4px 28px; box-shadow: 0 6px 0 var(--cream-dark); }

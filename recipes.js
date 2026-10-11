@@ -462,8 +462,8 @@ function makeDecorate(o) {
 /* Presentacion final: elegir mantel y plato, poner pegatinas y mostrar el plato para ella */
 function makePresent(o) {
   return {
-    text: '🌟 ¡Prepara la presentación!',
-    voice: 'Elige el mantel, el plato y las pegatinas para presentar tu plato. Cuando termines toca el visto.',
+    text: '🌟 Decora tu plato',
+    voice: 'Decora tu plato.',
     init(st, G) {
       const food = Game.art && o.useArt ? `<span class="foodart" style="background-image:url(${Game.art})"></span>` : `<span class="foodemoji">${o.emoji}</span>`;
       st.innerHTML = `<div class="table" style="--cloth:#ffd6e7"><div class="banner">${NAME() ? '¡Para ' + NAME() + '! 💖' : '¡Buen provecho! 💖'}</div>
@@ -919,7 +919,7 @@ const SALAD_STEPS = [
 
   makeSwipeCut({
     tiles: [{ e: '🥕', ok: true }, { e: '🥒', ok: true }, { e: '👟', ok: false }, { e: '🍅', ok: true }],
-    voice: 'Desliza tu dedo sobre cada verdura para cortarla. ¡El zapato no!', trapMsg: '¡No cortes el zapato! 👟'
+    voice: 'Corta los ingredientes.', trapMsg: '¡No cortes el zapato! 👟'
   }),
 
   /* 3. Al tazon: arrastrar (o tocar) las verduras; el peluche no va */
@@ -1207,7 +1207,7 @@ function makeMemory(o) {
   return {
     minLevel: 2,
     text: '🧠 ¡Memoriza la receta!',
-    voice: 'Mira bien estos ingredientes. ¡Van a desaparecer! Después tócalos de memoria.',
+    voice: 'Memoriza los ingredientes.',
     init(st, G) {
       const SHOW = byLv(0, 4000, 2800);
       st.innerHTML = '<div class="memcard"></div><div class="memtimer"><div></div></div><div class="shelf six memshelf"></div>';
@@ -1252,6 +1252,12 @@ function cakeHTML(big, withFlames) {
 }
 
 /* Velas: contar y poner exactamente las que pide el pastel */
+/* ajusta el tamano de las velas para que siempre quepan encima de la torta */
+function fitCandles(box, n) {
+  const w = box.clientWidth || 190;
+  box.style.setProperty('--cs', Math.max(14, Math.min(30, Math.floor(w * 0.84 / (Math.max(n, 1) * 1.25)))) + 'px');
+}
+
 function makeCandleCount() {
   return {
     text: '🕯️ ¡Pon las velas!',
@@ -1263,7 +1269,7 @@ function makeCandleCount() {
       st.innerHTML = `<div class="bignum" data-n="${N}">${N}</div>${cakeHTML(false, false)}
         <div class="candlerow"><button class="roundbtn" id="candUndo">↩️</button><button class="item candbtn">🕯️</button><button class="roundbtn ok" id="candOk">✅</button></div>`;
       const row = $('.candles', st); let n = 0;
-      const paint = () => { row.innerHTML = ''; for (let i = 0; i < n; i++) row.appendChild(el('span', 'cand', '🕯️')); };
+      const paint = () => { row.innerHTML = ''; for (let i = 0; i < n; i++) row.appendChild(el('span', 'cand', '🕯️')); fitCandles(row.parentNode, n); };
       $('.candbtn', st).addEventListener('click', () => { if (G.finished) return; if (n >= 10) { G.bad('¡Es demasiado! 🙀'); return; } n++; Sound.pop(); paint(); });
       $('#candUndo', st).addEventListener('click', () => { if (G.finished || n <= 0) return; n--; paint(); });
       $('#candOk', st).addEventListener('click', () => {
@@ -1286,7 +1292,7 @@ function makeBlowCandles() {
         <div class="blow-mic"><span>🎤</span><div class="micmeter"><div class="micfill"></div></div></div><button class="blow-btn" hidden>💨</button></div>`;
       const wrap = $('.blow', st), flames = $('.flames', st), candles = $('.candles', st), micRow = $('.blow-mic', st), mfill = $('.micfill', st), btn = $('.blow-btn', st);
       const fl = [];
-      for (let i = 0; i < N; i++) { candles.appendChild(el('span', 'cand', '🕯️')); const f = el('span', 'flame2', '🔥'); flames.appendChild(f); fl.push(f); }
+      fitCandles(candles.parentNode, N); for (let i = 0; i < N; i++) { candles.appendChild(el('span', 'cand', '🕯️')); const f = el('span', 'flame2', '🔥'); flames.appendChild(f); fl.push(f); }
       let p = 0, alive = true, held = false, det = null, last = performance.now(), raf = 0, out = 0;
       G.onCleanup(() => { alive = false; cancelAnimationFrame(raf); Mic.close(); });
       micRow.style.visibility = 'hidden';
@@ -1459,7 +1465,7 @@ const BURGER_STEPS = [
   }),
   makeStack({
     text: '🍞 🥩 🧀 🥬 🍞  ¡Apila!',
-    voice: 'Toca en este orden: pan, carne, queso, lechuga y otra vez pan.',
+    voice: 'Elige los ingredientes en orden.',
     order: [{ e: '🍞', c: '#f0b45c' }, { e: '🥩', c: '#b3593a' }, { e: '🧀', c: '#ffd24d' }, { e: '🥬', c: '#8ad46a' }, { e: '🍞', c: '#f0b45c' }],
     buttons: [{ e: '🍞', bg: '#fff3d6' }, { e: '🥩', bg: '#ffe3de' }, { e: '🧀', bg: '#fff7c9' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en la hamburguesa! 🧦' }],
     orderHard: [{ e: '🍞', c: '#f0b45c' }, { e: '🥩', c: '#b3593a' }, { e: '🧀', c: '#ffd24d' }, { e: '🍅', c: '#ee5a4a' }, { e: '🥬', c: '#8ad46a' }, { e: '🥩', c: '#b3593a' }, { e: '🍞', c: '#f0b45c' }],
@@ -1573,7 +1579,7 @@ const TOMATO_STEPS = [
   makeWash({ veg: ['🍅', '🧅', '🧄'], voice: 'Pasa tu dedo por los tomates, la cebolla y el ajo para quitar la suciedad.' }),
   makeSwipeCut({
     tiles: [{ e: '🍅', ok: true }, { e: '🧅', ok: true }, { e: '👟', ok: false }, { e: '🧄', ok: true }],
-    voice: 'Desliza tu dedo sobre cada verdura para cortarla. ¡El zapato no!', trapMsg: '¡No cortes el zapato! 👟'
+    voice: 'Corta los ingredientes.', trapMsg: '¡No cortes el zapato! 👟'
   }),
   makeIngredients({
     text: '🍅 🧅 🧄 🫒  ¡A la olla!',
@@ -1606,7 +1612,7 @@ const PEPPER_STEPS = [
   makeWash({ veg: ['🫑', '🍅', '🧅'], voice: 'Pasa tu dedo por los pimientos, el tomate y la cebolla para quitar la suciedad.' }),
   makeSwipeCut({
     tiles: [{ e: '🧅', ok: true }, { e: '🍅', ok: true }, { e: '🧦', ok: false }, { e: '🫑', ok: true }],
-    voice: 'Desliza tu dedo sobre cada verdura para cortarla. ¡El calcetín no!', trapMsg: '¡No cortes el calcetín! 🧦'
+    voice: 'Corta los ingredientes.', trapMsg: '¡No cortes el calcetín! 🧦'
   }),
   makeIngredients({
     text: '🍚 🍅 🧅 🧀  ¡Al tazón!',
@@ -1651,7 +1657,7 @@ const SANDWICH_STEPS = [
   makeWash({ veg: ['🥬', '🍅', '🥒'], voice: 'Pasa tu dedo por la lechuga, el tomate y el pepino para quitar la suciedad.' }),
   makeSwipeCut({
     tiles: [{ e: '🍅', ok: true }, { e: '🥒', ok: true }, { e: '🧦', ok: false }, { e: '🧀', ok: true }],
-    voice: 'Desliza tu dedo sobre cada ingrediente para cortarlo. ¡El calcetín no!', trapMsg: '¡No cortes el calcetín! 🧦'
+    voice: 'Corta los ingredientes.', trapMsg: '¡No cortes el calcetín! 🧦'
   }),
   makeHoldPour({
     text: '🫙 ¡Mantén presionado!',
@@ -1661,7 +1667,7 @@ const SANDWICH_STEPS = [
   }),
   makeStack({
     text: '🍞 🧀 🥓 🥬 🍞  ¡Arma el sándwich!',
-    voice: 'Toca en este orden: pan, queso, jamón, lechuga y otra vez pan.',
+    voice: 'Elige los ingredientes en orden.',
     order: [{ e: '🍞', c: '#f0b45c' }, { e: '🧀', c: '#ffd24d' }, { e: '🥓', c: '#e8838a' }, { e: '🥬', c: '#8ad46a' }, { e: '🍞', c: '#f0b45c' }],
     buttons: [{ e: '🍞', bg: '#fff3d6' }, { e: '🧀', bg: '#fff7c9' }, { e: '🥓', bg: '#ffe3e3' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en el sándwich! 🧦' }],
     orderHard: [{ e: '🍞', c: '#f0b45c' }, { e: '🧀', c: '#ffd24d' }, { e: '🥓', c: '#e8838a' }, { e: '🍅', c: '#ee5a4a' }, { e: '🥒', c: '#9bd56a' }, { e: '🥬', c: '#8ad46a' }, { e: '🍞', c: '#f0b45c' }],
@@ -1678,14 +1684,14 @@ const TACO_STEPS = [
   makeWash({ veg: ['🍅', '🥬', '🧅'], voice: 'Pasa tu dedo por el tomate, la lechuga y la cebolla para quitar la suciedad.' }),
   makeSwipeCut({
     tiles: [{ e: '🍅', ok: true }, { e: '🧅', ok: true }, { e: '👟', ok: false }, { e: '🥑', ok: true }],
-    voice: 'Desliza tu dedo sobre cada ingrediente para cortarlo. ¡El zapato no!', trapMsg: '¡No cortes el zapato! 👟'
+    voice: 'Corta los ingredientes.', trapMsg: '¡No cortes el zapato! 👟'
   }),
   ing('🥑 🍋 🧂  ¡Guacamole!', 'Toca el aguacate, el limón y la sal para echarlos al tazón. ¡El osito no!', 'bowl', '#b9d86a',
     [IT('🥑', 'aguacate', '#e8f3d3'), IT('🧸', 'osito', '#f4e3d3', false, '¡El osito no va en el guacamole! 🧸'), IT('🍋', 'limón', '#fff7c9'), IT('🧂', 'sal', '#eef2f5')]),
   makeMash({ text: '🥑 ¡Machaca el aguacate!', voice: 'Toca el aguacate muchas veces para machacarlo y hacer guacamole.', e: '🥑', done: '🥣' }),
   makeStack({
     text: '🫓 🥩 🥬 🍅 🧀  ¡Arma el taco!',
-    voice: 'Toca en este orden: tortilla, carne, lechuga, tomate y queso.',
+    voice: 'Elige los ingredientes en orden.',
     order: [{ e: '🫓', c: '#f3d9a4' }, { e: '🥩', c: '#b3593a' }, { e: '🥬', c: '#8ad46a' }, { e: '🍅', c: '#ee5a4a' }, { e: '🧀', c: '#ffd24d' }],
     buttons: [{ e: '🫓', bg: '#fff3d6' }, { e: '🥩', bg: '#ffe3de' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🍅', bg: '#ffe3e3' }, { e: '🧀', bg: '#fff7c9' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en el taco! 🧦' }],
     orderHard: [{ e: '🫓', c: '#f3d9a4' }, { e: '🥩', c: '#b3593a' }, { e: '🥑', c: '#a8d070' }, { e: '🥬', c: '#8ad46a' }, { e: '🍅', c: '#ee5a4a' }, { e: '🧅', c: '#e9d2ee' }, { e: '🧀', c: '#ffd24d' }],
@@ -1769,7 +1775,7 @@ const ICECREAM_STEPS = [
   }),
   makeStack({
     text: '🍓 🍫 🍦  ¡Pon las bolas!',
-    voice: 'Toca en este orden: fresa, chocolate y vainilla.',
+    voice: 'Elige los ingredientes en orden.',
     order: [{ e: '🍓', c: '#ffb3c7' }, { e: '🍫', c: '#8a5a3c' }, { e: '🍦', c: '#fff3d6' }],
     buttons: [{ e: '🍓', bg: '#ffe3e3' }, { e: '🍫', bg: '#f1e3dc' }, { e: '🍦', bg: '#fff7e6' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no es un sabor de helado! 🧦' }],
     orderHard: [{ e: '🍓', c: '#ffb3c7' }, { e: '🍫', c: '#8a5a3c' }, { e: '🍦', c: '#fff3d6' }, { e: '🍋', c: '#fff08a' }, { e: '🍌', c: '#ffe27a' }],
