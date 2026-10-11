@@ -467,3 +467,9 @@ canvas.decor { width: min(88vw, 340px); height: auto; aspect-ratio: 300 / 180; b
 .swatches { flex-wrap: wrap; justify-content: center; max-width: 94vw; gap: 6px; }
 .sticker-btn { width: min(42px, 10.5vw); height: min(42px, 10.5vw); font-size: min(28px, 7vw); }
 .swatch { width: min(38px, 9.5vw); height: min(38px, 9.5vw); }
+
+.bub.emo { display: flex; align-items: center; justify-content: center; }
+.mashball { transition: transform .1s; }
+/* Inicio con muchas recetas: la lista se desplaza hacia abajo */
+.recipes { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1 1 0; min-height: 168px; max-height: 46vh; align-content: start; padding: 4px 4px 8px; touch-action: pan-y; }
+.home-cat { max-height: 30vh; }

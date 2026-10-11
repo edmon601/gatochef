@@ -336,6 +336,26 @@ function makeCount(o) {
   };
 }
 
+/* Machacar (guacamole): tocar muchas veces; el aguacate se va aplastando */
+function makeMash(o) {
+  return {
+    text: o.text, voice: o.voice,
+    init(st, G) {
+      const NEED = byLv(8, 12, 16);
+      st.innerHTML = `<button class="dough-ball mashball">${o.e}</button><div class="meter"><div></div></div>`;
+      const ball = $('.mashball', st), bar = $('.meter > div', st);
+      let n = 0;
+      ball.addEventListener('pointerdown', (e) => {
+        if (G.finished) return;
+        n++; Sound.plop();
+        ball.style.transform = `scale(${1 + n / NEED * 0.25}, ${1 - n / NEED * 0.45})`;
+        bar.style.width = Math.min(100, n / NEED * 100) + '%';
+        if (n >= NEED) { ball.textContent = o.done || '🥣'; ball.style.transform = ''; G.later(() => G.done(), 350); }
+      });
+    }
+  };
+}
+
 /* Rellenar: tocar cada pimiento la cantidad de veces que dice (ni mas ni menos) */
 function makeStuff(o) {
   return {
@@ -363,7 +383,7 @@ function makeStuff(o) {
 
 /* Decorar libremente (crema, chocolate, fresas, lluvia de colores) y conservar el dibujo */
 function makeDecorate(o) {
-  const cupcake = o.base === 'cupcake';
+  const cupcake = o.base === 'cupcake', icecream = o.base === 'icecream';
   return {
     text: o.text || '🎨 ¡Decora tu torta!',
     voice: o.voice || 'Elige crema, chocolate, fresas o lluvia de colores y decora tu torta como quieras. Cuando termines toca el visto.',
@@ -375,7 +395,12 @@ function makeDecorate(o) {
       const cv = $('.decor', st), cx = cv.getContext('2d');
       const base = () => {
         cx.clearRect(0, 0, 300, 180);
-        if (cupcake) {
+        if (icecream) {
+          cx.fillStyle = '#e0a45f'; cx.beginPath(); cx.moveTo(95, 100); cx.lineTo(205, 100); cx.lineTo(150, 178); cx.closePath(); cx.fill();
+          cx.strokeStyle = '#c98a45'; cx.lineWidth = 3; for (let i = -2; i <= 2; i++) { cx.beginPath(); cx.moveTo(150 + i * 22, 100); cx.lineTo(150, 176); cx.stroke(); }
+          cx.fillStyle = '#ffd6e7'; cx.beginPath(); cx.arc(150, 70, 58, 0, Math.PI * 2); cx.fill();
+          cx.fillStyle = '#fff6e6'; cx.beginPath(); cx.arc(150, 38, 34, 0, Math.PI * 2); cx.fill();
+        } else if (cupcake) {
           cx.fillStyle = '#f7b7d2'; cx.beginPath(); cx.moveTo(60, 100); cx.lineTo(240, 100); cx.lineTo(214, 176); cx.lineTo(86, 176); cx.closePath(); cx.fill();
           cx.strokeStyle = '#e48fb4'; cx.lineWidth = 4; for (let x = 82; x < 230; x += 22) { cx.beginPath(); cx.moveTo(x, 104); cx.lineTo(150 + (x - 150) * 0.78, 174); cx.stroke(); }
           cx.fillStyle = '#e9b36b'; cx.beginPath(); cx.ellipse(150, 98, 98, 58, 0, Math.PI, 0); cx.fill();
@@ -427,7 +452,7 @@ function makeDecorate(o) {
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
       ok.addEventListener('click', () => {
         if (G.finished || ok.disabled) return;
-        if (!cupcake) { try { Game.art = cv.toDataURL('image/png'); } catch (err) { Game.art = null; } }
+        if (!cupcake && !icecream) { try { Game.art = cv.toDataURL('image/png'); } catch (err) { Game.art = null; } }
         Sound.pop(); G.done();
       });
     }
@@ -565,7 +590,7 @@ function makeSwipeCut(o) {
 /* Hervir: reventar burbujas (en nivel 2 y 3 aparecen burbujas de fuego 🔥 que NO se tocan) */
 function makeBubbles(o) {
   return {
-    text: '🫧 ¡Revienta las burbujas!', voice: o.voice,
+    text: o.text || '🫧 ¡Revienta las burbujas!', voice: o.voice,
     init(st, G) {
       st.innerHTML = '<div class="boilwrap"><div class="boilpot"><div class="soup"></div><div class="bubzone"></div></div><div class="flame">🔥</div></div><div class="meter"><div></div></div>';
       const zone = $('.bubzone', st), bar = $('.meter > div', st);
@@ -582,10 +607,10 @@ function makeBubbles(o) {
         if (active < MAXACT && pops + active < NEED + 2) {
           active++;
           const hot = Math.random() < HOT;
-          const b = el('button', 'bub' + (hot ? ' hot' : ''), hot ? '🔥' : '');
+          const b = el('button', 'bub' + (hot ? ' hot' : '') + (o.emoji ? ' emo' : ''), hot ? '🔥' : (o.emoji || ''));
           const size = 58 + Math.random() * 26;
           b.style.width = b.style.height = size + 'px';
-          if (hot) b.style.fontSize = size * 0.5 + 'px';
+          if (hot || o.emoji) b.style.fontSize = size * 0.55 + 'px';
           b.style.left = (6 + Math.random() * 78) + '%';
           const rm = () => { if (b.parentNode) { b.remove(); active--; } };
           b.addEventListener('animationend', (e) => { if (e.animationName === 'rise') rm(); });
@@ -1191,13 +1216,18 @@ function makeMemory(o) {
       shelf.style.visibility = 'hidden';
       tm.style.transition = `width ${SHOW}ms linear`; requestAnimationFrame(() => requestAnimationFrame(() => { tm.style.width = '0%'; }));
       let left = o.items.length, ready = false;
-      G.later(() => {
+      // se muestran los ingredientes un rato y luego se tapan, pero SOLO cuando el gato termino de explicar
+      const t0 = Date.now();
+      const reveal = () => {
+        if (G.finished) return;
+        if (Voice.speaking() && Date.now() - t0 < 14000) { G.later(reveal, 150); return; }
         ready = true;
         card.innerHTML = o.items.map(() => '<span class="q">❓</span>').join('');
         showBubble('¿Cuáles eran? 🤔', ''); Game.currentText = '¿Cuáles eran? 🤔';
-        Voice.say('¿Cuáles eran?');
+        Voice.say('¿Cuáles eran?', { queue: true });
         shelf.style.visibility = 'visible';
-      }, SHOW);
+      };
+      G.later(reveal, SHOW);
       const pool = shuffle(['🍌', '🍓', '🥦', '🍋', '🍞', '🍟', '🥒', '🍇', '🍒', '🥔'].filter((e) => !o.items.includes(e))).slice(0, 3);
       shuffle(o.items.concat(pool)).forEach((e) => {
         const b = el('button', 'item', e); b.dataset.ok = o.items.includes(e) ? '1' : '0';
@@ -1610,18 +1640,164 @@ const PEPPER_STEPS = [
   makeBlow({ food: '🫑', eat: '🍴', voice: 'Los pimientos están muy calientes. Sopla hacia el celular para enfriarlos y luego toca el tenedor.' })
 ];
 
+/* =========================================================
+   6 RECETAS MAS
+   ========================================================= */
+const ing = (t, v, container, fill, items) => makeIngredients({ text: t, voice: v, container, fillColor: fill, items });
+const IT = (e, l, bg, ok = true, msg) => ({ k: l, e, l, ok, bg, msg });
+
+/* --- Sandwich 🥪 --- */
+const SANDWICH_STEPS = [
+  makeWash({ veg: ['🥬', '🍅', '🥒'], voice: 'Pasa tu dedo por la lechuga, el tomate y el pepino para quitar la suciedad.' }),
+  makeSwipeCut({
+    tiles: [{ e: '🍅', ok: true }, { e: '🥒', ok: true }, { e: '🧦', ok: false }, { e: '🧀', ok: true }],
+    voice: 'Desliza tu dedo sobre cada ingrediente para cortarlo. ¡El calcetín no!', trapMsg: '¡No cortes el calcetín! 🧦'
+  }),
+  makeHoldPour({
+    text: '🫙 ¡Mantén presionado!',
+    voice: 'Mantén presionada la mayonesa y suelta cuando llegue a la zona verde.',
+    bottle: '🫙', color: '#fff2b0', vesselClass: 'jar', zone: [0.4, 0.75],
+    hint: '¡Un poquito más de mayonesa! 🫙', spill: '¡Uy, mucha mayonesa! 💦'
+  }),
+  makeStack({
+    text: '🍞 🧀 🥓 🥬 🍞  ¡Arma el sándwich!',
+    voice: 'Toca en este orden: pan, queso, jamón, lechuga y otra vez pan.',
+    order: [{ e: '🍞', c: '#f0b45c' }, { e: '🧀', c: '#ffd24d' }, { e: '🥓', c: '#e8838a' }, { e: '🥬', c: '#8ad46a' }, { e: '🍞', c: '#f0b45c' }],
+    buttons: [{ e: '🍞', bg: '#fff3d6' }, { e: '🧀', bg: '#fff7c9' }, { e: '🥓', bg: '#ffe3e3' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en el sándwich! 🧦' }],
+    orderHard: [{ e: '🍞', c: '#f0b45c' }, { e: '🧀', c: '#ffd24d' }, { e: '🥓', c: '#e8838a' }, { e: '🍅', c: '#ee5a4a' }, { e: '🥒', c: '#9bd56a' }, { e: '🥬', c: '#8ad46a' }, { e: '🍞', c: '#f0b45c' }],
+    buttonsHard: [{ e: '🍞', bg: '#fff3d6' }, { e: '🧀', bg: '#fff7c9' }, { e: '🥓', bg: '#ffe3e3' }, { e: '🍅', bg: '#ffe3e3' }, { e: '🥒', bg: '#e8f6dc' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en el sándwich! 🧦' }]
+  }),
+  makeBake({
+    text: '🔔 ¡Toca cuando suene!', voice: 'Espera a que suene el timbre y saca el sándwich tostado.',
+    tray: '<span class="bake-emoji">🥪</span>', burnt: '¡Uy, se quemó el pan! 💨'
+  })
+];
+
+/* --- Tacos 🌮 --- */
+const TACO_STEPS = [
+  makeWash({ veg: ['🍅', '🥬', '🧅'], voice: 'Pasa tu dedo por el tomate, la lechuga y la cebolla para quitar la suciedad.' }),
+  makeSwipeCut({
+    tiles: [{ e: '🍅', ok: true }, { e: '🧅', ok: true }, { e: '👟', ok: false }, { e: '🥑', ok: true }],
+    voice: 'Desliza tu dedo sobre cada ingrediente para cortarlo. ¡El zapato no!', trapMsg: '¡No cortes el zapato! 👟'
+  }),
+  ing('🥑 🍋 🧂  ¡Guacamole!', 'Toca el aguacate, el limón y la sal para echarlos al tazón. ¡El osito no!', 'bowl', '#b9d86a',
+    [IT('🥑', 'aguacate', '#e8f3d3'), IT('🧸', 'osito', '#f4e3d3', false, '¡El osito no va en el guacamole! 🧸'), IT('🍋', 'limón', '#fff7c9'), IT('🧂', 'sal', '#eef2f5')]),
+  makeMash({ text: '🥑 ¡Machaca el aguacate!', voice: 'Toca el aguacate muchas veces para machacarlo y hacer guacamole.', e: '🥑', done: '🥣' }),
+  makeStack({
+    text: '🫓 🥩 🥬 🍅 🧀  ¡Arma el taco!',
+    voice: 'Toca en este orden: tortilla, carne, lechuga, tomate y queso.',
+    order: [{ e: '🫓', c: '#f3d9a4' }, { e: '🥩', c: '#b3593a' }, { e: '🥬', c: '#8ad46a' }, { e: '🍅', c: '#ee5a4a' }, { e: '🧀', c: '#ffd24d' }],
+    buttons: [{ e: '🫓', bg: '#fff3d6' }, { e: '🥩', bg: '#ffe3de' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🍅', bg: '#ffe3e3' }, { e: '🧀', bg: '#fff7c9' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en el taco! 🧦' }],
+    orderHard: [{ e: '🫓', c: '#f3d9a4' }, { e: '🥩', c: '#b3593a' }, { e: '🥑', c: '#a8d070' }, { e: '🥬', c: '#8ad46a' }, { e: '🍅', c: '#ee5a4a' }, { e: '🧅', c: '#e9d2ee' }, { e: '🧀', c: '#ffd24d' }],
+    buttonsHard: [{ e: '🫓', bg: '#fff3d6' }, { e: '🥩', bg: '#ffe3de' }, { e: '🥑', bg: '#e8f3d3' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🍅', bg: '#ffe3e3' }, { e: '🧅', bg: '#f7e8f3' }, { e: '🧀', bg: '#fff7c9' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en el taco! 🧦' }]
+  }),
+  makeBake({
+    text: '🔔 ¡Toca cuando suene!', voice: 'Espera a que suene el timbre y saca los tacos calientes.',
+    tray: '<span class="bake-emoji">🌮</span><span class="bake-emoji">🌮</span>', burnt: '¡Uy, se quemó la tortilla! 💨'
+  })
+];
+
+/* --- Batido de frutas 🥤 --- */
+const SMOOTHIE_STEPS = [
+  ing('🍓 🍌 🥛 🧊  ¡A la licuadora!', 'Toca la fresa, el plátano, la leche y el hielo para echarlos a la licuadora. ¡El calcetín no!', 'bowl', '#ffb3c7',
+    [IT('🍓', 'fresa', '#ffe3e3'), IT('🧦', 'calcetín', '#e5eaff', false, '¡El calcetín no va en el batido! 🧦'), IT('🍌', 'plátano', '#fff7c9'), IT('🥛', 'leche', '#eef6ff'), IT('🧊', 'hielo', '#e3f2ff')]),
+  makeMix({
+    text: '🌀 ¡Licúa!', voice: 'Gira tu dedo dentro de la licuadora para licuar el batido.',
+    bowlClass: 'pot-round', spill: '¡Uy, salpica el batido! 💦',
+    inner: '<div class="mixinner soupmix"><span>🍓</span><span>🍌</span><span>🥛</span><span>🍓</span><span>🧊</span></div>',
+    spinSel: '.mixinner', spoon: '🌀', laps: 3
+  }),
+  makeHoldPour({
+    text: '🫗 ¡Mantén presionado!', voice: 'Mantén presionada la jarra y suelta cuando el batido llegue a la zona verde del vaso.',
+    bottle: '🫗', color: '#ff9fb8', vesselClass: 'jar', zone: [0.5, 0.82],
+    hint: '¡Un poquito más de batido! 🥤', spill: '¡Uy, se derramó el batido! 💦'
+  }),
+  ing('🍓 🍒 🍋  ¡A decorar!', 'Toca la fresa, la cereza y el limón para decorar tu vaso. ¡La cebolla no!', 'bowl', '#ffc2dc',
+    [IT('🍓', 'fresa', '#ffe3e3'), IT('🧅', 'cebolla', '#f7e8f3', false, '¡La cebolla no va en el batido! 🧅'), IT('🍒', 'cereza', '#ffe0e6'), IT('🍋', 'limón', '#fff7c9')])
+];
+
+/* --- Palomitas 🍿 --- */
+const POPCORN_STEPS = [
+  ing('🌽 🫒 🧂  ¡A la olla!', 'Toca el maíz, el aceite y la sal para echarlos a la olla. ¡El calcetín no!', 'pot', '#f7d96a',
+    [IT('🌽', 'maíz', '#fff3c4'), IT('🧦', 'calcetín', '#e5eaff', false, '¡El calcetín no va en la olla! 🧦'), IT('🫒', 'aceite', '#eaf3d3'), IT('🧂', 'sal', '#eef2f5')]),
+  makeBake({
+    text: '🔔 ¡Toca cuando suene!', voice: 'Espera a que suene el timbre y destapa la olla para que empiecen a saltar.',
+    tray: '<span class="bake-emoji">🌽</span>', burnt: '¡Uy, se quemó el maíz! 💨'
+  }),
+  makeBubbles({ text: '🍿 ¡Atrapa las palomitas!', emoji: '🍿', voice: 'Toca las palomitas que saltan para atraparlas. ¡Las de fuego no!' }),
+  makeHoldPour({
+    text: '🧈 ¡Mantén presionado!', voice: 'Mantén presionada la mantequilla derretida y suelta cuando llegue a la zona verde.',
+    bottle: '🧈', color: '#ffe066', vesselClass: 'jar', zone: [0.4, 0.75],
+    hint: '¡Un poquito más de mantequilla! 🧈', spill: '¡Uy, mucha mantequilla! 💦'
+  }),
+  makeBlow({ food: '🍿', eat: '👄', voice: 'Las palomitas están muy calientes. Sopla hacia el celular para enfriarlas y luego toca la boquita.' })
+];
+
+/* --- Tortilla de huevo 🍳 --- */
+const OMELETTE_STEPS = [
+  COOKIE_STEPS[1],                                              // cascar huevos
+  makeMix({
+    text: '🥣 ¡Bate con el batidor!', voice: 'Gira tu dedo dentro del tazón para batir los huevos con el batidor.',
+    bowlClass: '', spill: '¡Uy, se salen los huevos! 💦',
+    inner: '<div class="mixinner salad"><span>🥚</span><span>🥚</span><span>🥚</span><span>🥚</span><span>🥚</span></div>',
+    spinSel: '.mixinner', spoon: WHISK, laps: 3
+  }),
+  ing('🧀 🍅 🫑  ¡Al relleno!', 'Toca el queso, el tomate y el pimiento para echarlos al tazón. ¡El osito no!', 'bowl', '#ffe38a',
+    [IT('🧀', 'queso', '#fff7c9'), IT('🧸', 'osito', '#f4e3d3', false, '¡El osito no va en la tortilla! 🧸'), IT('🍅', 'tomate', '#ffe3e3'), IT('🫑', 'pimiento', '#e3f4dc')]),
+  makeHoldPour({
+    text: '🥣 ¡Mantén presionado!', voice: 'Mantén presionado el tazón y suelta cuando los huevos lleguen a la zona verde de la sartén.',
+    bottle: '🥣', color: '#ffe38a', vesselClass: 'jar', zone: [0.45, 0.8],
+    hint: '¡Un poquito más de huevo! 🥣', spill: '¡Uy, se derramó el huevo! 💦'
+  }),
+  makeFlip({ text: '🍳 ¡Desliza hacia arriba!', voice: 'Cuando la tortilla esté dorada, desliza tu dedo hacia arriba para voltearla.', flips: undefined }),
+  makeBlow({ food: '🍳', eat: '🍴', voice: 'La tortilla está muy caliente. Sopla hacia el celular para enfriarla y luego toca el tenedor.' })
+];
+
+/* --- Helado 🍨 --- */
+const ICECREAM_STEPS = [
+  ing('🥛 🧂 🍓  ¡A la heladera!', 'Toca la leche, el azúcar y las fresas para echarlos a la heladera. ¡La cebolla no!', 'bowl', '#ffd1df',
+    [IT('🥛', 'leche', '#eef6ff'), IT('🧅', 'cebolla', '#f7e8f3', false, '¡La cebolla no va en el helado! 🧅'), IT('🧂', 'azúcar', '#ffe3ee'), IT('🍓', 'fresas', '#ffe3e3')]),
+  makeMix({
+    text: '🥣 ¡Bate con el batidor!', voice: 'Gira tu dedo dentro de la heladera para batir la mezcla con el batidor.',
+    bowlClass: '', spill: '¡Uy, se sale la mezcla! 💦',
+    inner: '<div class="mixinner salad"><span>🥛</span><span>🍓</span><span>🥛</span><span>🍓</span><span>🥛</span></div>',
+    spinSel: '.mixinner', spoon: WHISK, laps: 3
+  }),
+  makeBake({
+    text: '❄️ ¡Toca cuando suene!', voice: 'Espera a que suene el timbre y saca el helado del congelador.',
+    tray: '<span class="bake-emoji">🧊</span>', burnt: '¡Uy, se congeló demasiado! 🧊'
+  }),
+  makeStack({
+    text: '🍓 🍫 🍦  ¡Pon las bolas!',
+    voice: 'Toca en este orden: fresa, chocolate y vainilla.',
+    order: [{ e: '🍓', c: '#ffb3c7' }, { e: '🍫', c: '#8a5a3c' }, { e: '🍦', c: '#fff3d6' }],
+    buttons: [{ e: '🍓', bg: '#ffe3e3' }, { e: '🍫', bg: '#f1e3dc' }, { e: '🍦', bg: '#fff7e6' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no es un sabor de helado! 🧦' }],
+    orderHard: [{ e: '🍓', c: '#ffb3c7' }, { e: '🍫', c: '#8a5a3c' }, { e: '🍦', c: '#fff3d6' }, { e: '🍋', c: '#fff08a' }, { e: '🍌', c: '#ffe27a' }],
+    buttonsHard: [{ e: '🍓', bg: '#ffe3e3' }, { e: '🍫', bg: '#f1e3dc' }, { e: '🍦', bg: '#fff7e6' }, { e: '🍋', bg: '#fff7c9' }, { e: '🍌', bg: '#fff3b0' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no es un sabor de helado! 🧦' }]
+  }),
+  makeHoldPour({
+    text: '🍫 ¡Mantén presionado!', voice: 'Mantén presionada la salsa de chocolate y suelta cuando llegue a la zona verde.',
+    bottle: '🍫', color: '#6b3a22', vesselClass: 'jar', zone: [0.45, 0.8],
+    hint: '¡Un poquito más de chocolate! 🍫', spill: '¡Uy, mucho chocolate! 💦'
+  }),
+  makeDecorate({ base: 'icecream', text: '🎨 ¡Decora tu helado!', voice: 'Elige crema, chocolate, fresas o lluvia de colores y decora tu helado como quieras. Cuando termines toca el visto.' })
+];
+
 // Memoria: ingredientes de cada receta (para el paso "memoriza", nivel 2 y 3)
 const MEM = {
   cookies: ['🌾', '🧈', '🍫'], pizza: ['🍅', '🧀', '🍄'], salad: ['🥬', '🍅', '🥕'], soup: ['🥕', '🥔', '🧅'],
   pasta: ['🍝', '🧂', '🫒'], cocoa: ['🍫', '🥛', '🍯'], pancakes: ['🥚', '🥛', '🌾'], burger: ['🥩', '🧀', '🥬'],
-  cupcakes: ['🥚', '🥛', '🌾'], cake: ['🌾', '🥚', '🧈'], tomato: ['🍅', '🧅', '🧄'], peppers: ['🫑', '🍚', '🧀']
+  cupcakes: ['🥚', '🥛', '🌾'], cake: ['🌾', '🥚', '🧈'], tomato: ['🍅', '🧅', '🧄'], peppers: ['🫑', '🍚', '🧀'],
+  sandwich: ['🍞', '🧀', '🥬'], tacos: ['🥩', '🍅', '🧀'], smoothie: ['🍓', '🍌', '🥛'], popcorn: ['🌽', '🫒', '🧂'], omelette: ['🥚', '🧀', '🍅'], icecream: ['🥛', '🍓', '🍫']
 };
 // Contar y calcular al final de cada receta (m = nombre masculino)
 const COUNT = {
   cookies: { e: '🍪', what: 'galletas' }, pizza: { e: '🍕', what: 'porciones' }, salad: { e: '🍅', what: 'tomates', m: 1 },
   soup: { e: '🥕', what: 'zanahorias' }, pasta: { e: '🍅', what: 'tomates', m: 1 }, cocoa: { e: '☁️', what: 'malvaviscos', m: 1 },
   pancakes: { e: '🥞', what: 'panqueques', m: 1 }, burger: { e: '🍔', what: 'hamburguesas' }, cupcakes: { e: '🧁', what: 'cupcakes', m: 1 },
-  cake: { e: '🍓', what: 'fresas' }, tomato: { e: '🍅', what: 'tomates', m: 1 }, peppers: { e: '🫑', what: 'pimientos', m: 1 }
+  cake: { e: '🍓', what: 'fresas' }, tomato: { e: '🍅', what: 'tomates', m: 1 }, peppers: { e: '🫑', what: 'pimientos', m: 1 },
+  sandwich: { e: '🥪', what: 'sándwiches', m: 1 }, tacos: { e: '🌮', what: 'tacos', m: 1 }, smoothie: { e: '🥤', what: 'vasos', m: 1 },
+  popcorn: { e: '🍿', what: 'bolsas de palomitas' }, omelette: { e: '🍳', what: 'huevos', m: 1 }, icecream: { e: '🍨', what: 'bolas de helado' }
 };
 
 /* =========================================================
@@ -1682,6 +1858,36 @@ const RECIPES = {
     emoji: '🫑', name: 'Pimientos rellenos', steps: PEPPER_STEPS,
     winTitle: '¡Pimientos listos!', winVoice: '¡Pimientos rellenos listos! ¡Qué ricos!',
     result(box) { ['🫑', '🧀', '🍅', '🫑'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
+  sandwich: {
+    emoji: '🥪', name: 'Sándwich', steps: SANDWICH_STEPS,
+    winTitle: '¡Sándwich listo!', winVoice: '¡Sándwich listo! ¡Qué rico!',
+    result(box) { ['🥪', '🧀', '🥬', '🥪'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
+  tacos: {
+    emoji: '🌮', name: 'Tacos', steps: TACO_STEPS,
+    winTitle: '¡Tacos listos!', winVoice: '¡Tacos listos! ¡Qué ricos!',
+    result(box) { ['🌮', '🥑', '🍅', '🌮'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
+  smoothie: {
+    emoji: '🥤', name: 'Batido de frutas', steps: SMOOTHIE_STEPS,
+    winTitle: '¡Batido listo!', winVoice: '¡Batido de frutas listo! ¡Qué rico!',
+    result(box) { ['🥤', '🍓', '🍌', '🥤'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
+  popcorn: {
+    emoji: '🍿', name: 'Palomitas', steps: POPCORN_STEPS,
+    winTitle: '¡Palomitas listas!', winVoice: '¡Palomitas listas! ¡Qué ricas!',
+    result(box) { ['🍿', '🌽', '🧈', '🍿'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
+  omelette: {
+    emoji: '🍳', name: 'Tortilla de huevo', steps: OMELETTE_STEPS,
+    winTitle: '¡Tortilla lista!', winVoice: '¡Tortilla de huevo lista! ¡Qué rica!',
+    result(box) { ['🍳', '🧀', '🍅', '🍳'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
+  icecream: {
+    emoji: '🍨', name: 'Helado', steps: ICECREAM_STEPS,
+    winTitle: '¡Helado listo!', winVoice: '¡Helado listo! ¡Qué rico!',
+    result(box) { ['🍨', '🍓', '🍫', '🍨'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
   },
   cake: {
     emoji: '🎂', name: 'Torta', steps: CAKE_STEPS,

@@ -5,7 +5,7 @@ externos y sin pedir ningún dato. Una vez instalado funciona sin internet.
 
 ## Qué hace el juego
 
-Un gatito chef naranja guía a la niña para cocinar **12 recetas**, cada una con sus propios minijuegos.
+Un gatito chef naranja guía a la niña para cocinar **18 recetas**, cada una con sus propios minijuegos.
 Todas están abiertas desde el inicio (sin bloqueos, para que nunca se frustre).
 
 | Receta | Minijuegos |
@@ -22,6 +22,12 @@ Todas están abiertas desde el inicio (sin bloqueos, para que nunca se frustre).
 | 🍅 **Sopa de tomate** | Lavar · cortar · ingredientes (tomates, cebolla, ajo, aceite) · burbujas · revolver · sal exacta · 💨 soplar |
 | 🫑 **Pimientos rellenos** | Lavar · cortar · relleno (arroz, tomate, cebolla, queso) · mezclar · **rellenar cada pimiento contando** · hornear · 💨 soplar |
 | 🧁 **Cupcakes** (5) | Ingredientes (¡el calcetín no!) · mezclar · hornear · crema · decorar (¡la cebolla no!) |
+| 🥪 **Sándwich** | Lavar · cortar · aliño · apilar en orden · tostar · contar |
+| 🌮 **Tacos** | Lavar · cortar · guacamole · **machacar el aguacate** · armar el taco · hornear |
+| 🥤 **Batido de frutas** | Ingredientes a la licuadora · licuar · servir en la zona verde · decorar |
+| 🍿 **Palomitas** | Ingredientes a la olla · esperar el timbre · **atrapar palomitas saltarinas** (¡las de fuego no!) · mantequilla · 💨 soplar |
+| 🍳 **Tortilla de huevo** | Romper huevos · batir con batidor · relleno · verter en la sartén · voltear · 💨 soplar |
+| 🍨 **Helado** | Ingredientes · mezclar · congelar · apilar bolas · servir · **decorar el cono** |
 
 - Tocar al gato = maullido agradable.
 - Equivocarse = maullido de gato estresado, **un solo maullido de 2 segundos** (la cara de susto del gato dura lo mismo). Sin castigo: siempre puede repetir el paso.
@@ -111,7 +117,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
    No hace falta tener todos: los que falten usan el sonido de reemplazo.
 2. Escribe los nombres con extensión en `sounds/list.json`, por ejemplo:
    `["meow-ok-1.mp3", "meow-bad-1.mp3", "crack.wav"]` (la lista actual ya trae `meow-bad-1.mp3`; agrega los nuevos sin quitarlo)
-3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v8`; pasa a `gatochef-v9`) y agrega los archivos nuevos a la lista `CORE` para que
+3. En `sw.js` sube el número de `CACHE` (ahora es `gatochef-v9`; pasa a `gatochef-v10`) y agrega los archivos nuevos a la lista `CORE` para que
    los celulares ya instalados descarguen los cambios.
 
 ## Actualizar y comprobar que tienes la versión nueva
@@ -119,7 +125,7 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
 1. Sube **todos** los archivos al hosting (incluido `embedded-sounds.js`).
 2. Abre la app **dos veces** (la primera descarga la versión nueva, la segunda la usa).
 3. Comprueba: en la pantalla de inicio **mantén presionado 1 segundo el engranaje ⚙️**. Abajo debe decir
-   `Versión 8 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
+   `Versión 9 · Maullido de error: cargado ✓ (2 s)`. Con el botón **🔊 Probar el maullido de error** lo oyes sin tener que equivocarte.
 4. Si NO aparece la línea de "Versión" o dice otra versión, el celular sigue con archivos viejos: en Android abre
    Ajustes → Aplicaciones → Gato Chef → Almacenamiento → **Borrar caché** (y si hace falta **Borrar datos**), o desinstala y vuelve a instalar.
 
@@ -131,3 +137,8 @@ El resto de sonidos (maullido agradable, cocina) los **fabrica el juego por sí 
 - `recipes.js`: las recetas y todos sus minijuegos.
 - `manifest.json`, `sw.js`, `icons/`: lo que lo hace instalable y funcional sin internet.
 - `sounds/`: sonidos opcionales.
+
+
+## Novedades v9
+- 6 recetas nuevas (18 en total; la pantalla de inicio se desliza hacia abajo).
+- El gato **termina de hablar** (instrucciones y felicitaciones) antes de pasar a la siguiente pantalla; en memoria, los ingredientes no se tapan hasta que acabe de explicar.

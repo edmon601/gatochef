@@ -4,7 +4,7 @@
    Sin publicidad, sin internet, sin compras, sin enlaces.
    ========================================================= */
 
-const APP_VERSION = '8';
+const APP_VERSION = '9';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
@@ -405,18 +405,32 @@ const Voice = {
     choose();
     speechSynthesis.onvoiceschanged = choose;
   },
-  say(text) {
+  // active: frases que todavia estan sonando o esperando turno; tail: hora estimada en que termina todo
+  active: new Set(), tail: 0,
+  // say(texto)              -> corta lo que suena y dice esto
+  // say(texto, {queue:true}) -> lo dice DESPUES de terminar lo que ya esta sonando (sin cortarlo)
+  say(text, opts) {
     if (!text || !Settings.data.voice || Settings.data.muted || !('speechSynthesis' in window)) return;
     try {
-      speechSynthesis.cancel();
+      const queue = !!(opts && opts.queue);
+      if (!queue) { speechSynthesis.cancel(); this.active.clear(); this.tail = 0; }
       const u = new SpeechSynthesisUtterance(text);
       u.lang = this.v ? this.v.lang : 'es-ES';
       if (this.v) u.voice = this.v;
       u.rate = 0.9; u.pitch = 1.25; u.volume = Settings.data.volume;
+      const token = {};
+      this.active.add(token);
+      const fin = () => { this.active.delete(token); };
+      u.onend = fin; u.onerror = fin;
+      // seguro por si el celular nunca avisa que termino de hablar
+      const dur = 1200 + text.length * 80;
+      this.tail = Math.max(Date.now(), this.tail) + dur;
+      setTimeout(fin, Math.max(500, this.tail - Date.now()) + 800);
       speechSynthesis.speak(u);
     } catch (e) { /* sin voz */ }
   },
-  stop() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* nada */ } }
+  speaking() { return this.active.size > 0; },
+  stop() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* nada */ } this.active.clear(); this.tail = 0; }
 };
 
 /* ---------------- Formas de galletas ---------------- */
@@ -557,11 +571,15 @@ const Game = {
     animCat(guide, 'jump');
     const p = praise();
     showBubble(p, 'good');
-    Voice.say(p.replace(/[^\p{L}\s¡!¿?,]/gu, ''));
-    this.later(() => {
+    Voice.say(p.replace(/[^\p{L}\s¡!¿?,]/gu, ''), { queue: true });       // se dice DESPUES de la instruccion, sin cortarla
+    // pasa a la siguiente pantalla solo cuando el gato termino de hablar (maximo 25 s por si el celular no avisa)
+    const t0 = Date.now();
+    const advance = () => {
       this.idx++;
       if (this.idx >= this.steps().length) this.win(); else this.runStep();
-    }, 1700);
+    };
+    const check = () => { if (Voice.speaking() && Date.now() - t0 < 25000) this.later(check, 150); else this.later(advance, 350); };
+    this.later(check, 1500);
   },
 
   win() {
