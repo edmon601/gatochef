@@ -75,7 +75,7 @@ const COOKIE_STEPS = [
     init(st, G) {
       st.innerHTML = '<div class="mixzone"><div class="bigbowl"><div class="dough"></div></div><div class="hint-circle"></div><div class="spoon">🥄</div></div><div class="meter"><div></div></div>';
       const zone = $('.mixzone', st), dough = $('.dough', st), spoon = $('.spoon', st), bar = $('.meter > div', st), hint = $('.hint-circle', st);
-      const LAPS = 3, NEED = Math.PI * 2 * LAPS;
+      const LAPS = byLv(3, 4, 6), NEED = Math.PI * 2 * LAPS;
       let prog = 0, down = false, last = 0, outside = false, lastSwoosh = 0;
       const geo = () => { const r = zone.getBoundingClientRect(); return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, R: r.width / 2, r }; };
 
@@ -141,7 +141,7 @@ const COOKIE_STEPS = [
     text: '🔔 ¡Toca cuando suene!',
     voice: 'Espera a que suene el timbre y saca las galletas.',
     init(st, G) {
-      const ZS = 0.55, ZE = 1.0, DUR = 7000;
+      const ZS = byLv(0.55, 0.6, 0.66), ZE = byLv(1.0, 0.88, 0.8), DUR = byLv(7000, 6000, 5200);
       st.innerHTML = `<div class="oven baking"><div class="oven-window"><div class="tray">${KINDS.map(shapeSVG).join('')}</div></div><div class="smoke">💨💨</div></div>
         <div class="timer"><div class="zone"></div><div class="bar"></div></div>
         <button class="bigbtn" id="take">🧤</button>`;
@@ -156,7 +156,7 @@ const COOKIE_STEPS = [
         const p = (now - t0) / DUR;
         bar.style.width = Math.min(1, p) * 100 + '%';
         if (p >= ZS && !dinged) { dinged = true; Sound.ding(); timer.classList.add('ready'); win.classList.add('hot'); }
-        if (p > 1.12) {                       // se paso: salen humitos, y a empezar otra vez
+        if (p > ZE + 0.12) {                       // se paso: salen humitos, y a empezar otra vez
           smoke.classList.remove('show'); void smoke.offsetWidth; smoke.classList.add('show');
           G.bad('¡Uy, se quemaron un poquito! 💨');
           Sound.sizzleStop(); G.later(restart, 1200); t0 = now + 1e9;
@@ -169,7 +169,7 @@ const COOKIE_STEPS = [
         const p = (performance.now() - t0) / DUR;
         if (p < 0) return;
         if (p < ZS) G.bad('¡Todavía no, espera el timbre! 🔔');
-        else if (p <= 1.12) { Sound.pop(); G.done(); }
+        else if (p <= ZE + 0.12) { Sound.pop(); G.done(); }
       });
     }
   },
@@ -232,40 +232,58 @@ function makeIngredients(o) {
     text: o.text, voice: o.voice,
     init(st, G) {
       const pot = o.container === 'pot';
-      st.innerHTML = '<div class="shelf"></div>' + (pot
+      let items = o.items.slice();
+      if (LV() >= 3) {                                          // nivel Maestro: dos trampas mas
+        const pool = shuffle(['🧦', '👟', '🧸', '🪥', '🎈', '🧼'].filter((e) => !items.some((i) => i.e === e)));
+        items = shuffle(items.concat(pool.slice(0, 2).map((e) => ({ k: 'x' + e, e, ok: false, bg: '#eceaf6', msg: '¡Eso no va ahí! 🙀' }))));
+      }
+      st.innerHTML = `<div class="shelf${items.length > 4 ? ' six' : ''}"></div>` + (pot
         ? '<div class="pot"><div class="pot-rim"></div><div class="pot-fill"></div></div>'
         : '<div class="bowl"><div class="bowl-fill"></div></div>');
       const shelf = $('.shelf', st), target = $(pot ? '.pot' : '.bowl', st), fill = $(pot ? '.pot-fill' : '.bowl-fill', st);
       if (o.fillColor) fill.style.background = o.fillColor;
-      const need = o.items.filter((i) => i.ok).length;
-      let got = 0;
-      o.items.forEach((it) => {
+      // cantidades: en nivel 2 y 3 cada ingrediente trae un numero (¡hay que contar!)
+      const QTY = [[1, 1, 1, 1], [2, 1, 2, 1], [3, 2, 3, 2]][LV() - 1];
+      let gi = 0;
+      items.forEach((it) => { if (it.ok) { it.need = QTY[gi % 4]; it.got = 0; gi++; } });
+      const totalNeed = items.filter((i) => i.ok).reduce((s, i) => s + i.need, 0);
+      let total = 0, finishing = false;
+      if (LV() >= 2) showBubble(o.text + '  🔢', '');
+      items.forEach((it) => {
         const b = el('button', 'item', it.e);
         if (it.bg) b.style.background = it.bg;
+        b.dataset.ok = it.ok ? '1' : '0';
+        let badge = null;
+        if (it.ok && LV() >= 2) { b.dataset.need = it.need; badge = el('span', 'qbadge', '0/' + it.need); b.appendChild(badge); }
         b.addEventListener('click', () => {
-          if (b.disabled) return;
+          if (b.disabled || finishing) return;
           if (!it.ok) { shakeEl(b); G.bad(it.msg || '¡Eso no va ahí!'); return; }
-          b.disabled = true; Sound.pop();
+          if (it.got >= it.need) { shakeEl(b); G.bad('¡Ya pusiste suficiente! ✋'); return; }
+          it.got++; total++; Sound.pop();
+          if (badge) { badge.textContent = it.got + '/' + it.need; if (it.got >= it.need) { badge.classList.add('full'); b.classList.add('full'); } }
+          const last = total >= totalNeed;
+          if (last) finishing = true;
           fly(b, target, () => {
-            Sound.plop(); got++;
-            fill.style.transform = `scaleY(${0.35 + 0.65 * got / need})`;
-            if (got === need) G.done();
+            Sound.plop();
+            fill.style.transform = `scaleY(${0.35 + 0.65 * Math.min(1, (total - (last ? 0 : 0)) / totalNeed)})`;
+            if (last) G.done();
           });
+          if (it.got < it.need || LV() >= 2) b.style.visibility = '';   // se puede volver a tocar hasta completar la cantidad
+          if (LV() < 2) b.disabled = true;
         });
         shelf.appendChild(b);
       });
     }
   };
 }
-
-/* Mezclar: girar el dedo dentro del recipiente sin salirse */
 function makeMix(o) {
   return {
     text: o.text, voice: o.voice,
     init(st, G) {
       st.innerHTML = `<div class="mixzone"><div class="bigbowl ${o.bowlClass || ''}">${o.inner}</div><div class="hint-circle"></div><div class="spoon">${o.spoon || '🥄'}</div></div><div class="meter"><div></div></div>`;
       const zone = $('.mixzone', st), spin = $(o.spinSel || '.dough', st), spoon = $('.spoon', st), bar = $('.meter > div', st), hint = $('.hint-circle', st);
-      const NEED = Math.PI * 2 * (o.laps || 3);
+      const NEED = Math.PI * 2 * Math.round((o.laps || 3) * byLv(1, 1.5, 2));
+      const EDGE = byLv(0.98, 0.93, 0.88);
       let prog = 0, down = false, last = 0, outside = false, lastSwoosh = 0;
       const geo = () => { const r = zone.getBoundingClientRect(); return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, R: r.width / 2, r }; };
       zone.addEventListener('pointerdown', (e) => {
@@ -279,7 +297,7 @@ function makeMix(o) {
         if (!down || G.finished) return;
         const g = geo(); const dx = e.clientX - g.cx, dy = e.clientY - g.cy, dist = Math.hypot(dx, dy);
         spoon.style.left = (e.clientX - g.r.left) + 'px'; spoon.style.top = (e.clientY - g.r.top) + 'px';
-        if (dist > g.R * 0.98) { if (!outside) { outside = true; G.bad(o.spill || '¡Uy, se sale! 💦'); } return; }
+        if (dist > g.R * EDGE) { if (!outside) { outside = true; G.bad(o.spill || '¡Uy, se sale! 💦'); } return; }
         outside = false;
         if (dist < g.R * 0.1) return;
         const a = Math.atan2(dy, dx);
@@ -301,18 +319,67 @@ function makeMix(o) {
   };
 }
 
+/* Hervir: reventar burbujas (en nivel 2 y 3 aparecen burbujas de fuego 🔥 que NO se tocan) */
+function makeBubbles(o) {
+  return {
+    text: '🫧 ¡Revienta las burbujas!', voice: o.voice,
+    init(st, G) {
+      st.innerHTML = '<div class="boilwrap"><div class="boilpot"><div class="soup"></div><div class="bubzone"></div></div><div class="flame">🔥</div></div><div class="meter"><div></div></div>';
+      const zone = $('.bubzone', st), bar = $('.meter > div', st);
+      const NEED = byLv(8, 12, 16), MAXACT = byLv(3, 4, 5), HOT = byLv(0, 0.18, 0.28), GAP = byLv(450, 380, 300);
+      let pops = 0, active = 0, alive = true, timer = 0, done = false;
+      G.onCleanup(() => { alive = false; clearTimeout(timer); });
+      const finish = () => {
+        done = true; alive = false; clearTimeout(timer);
+        zone.querySelectorAll('.bub').forEach((x) => x.remove());          // no queda ninguna burbuja de mas
+        G.done();
+      };
+      const spawn = () => {
+        if (!alive || G.finished || done) return;
+        if (active < MAXACT && pops + active < NEED + 2) {
+          active++;
+          const hot = Math.random() < HOT;
+          const b = el('button', 'bub' + (hot ? ' hot' : ''), hot ? '🔥' : '');
+          const size = 58 + Math.random() * 26;
+          b.style.width = b.style.height = size + 'px';
+          if (hot) b.style.fontSize = size * 0.5 + 'px';
+          b.style.left = (6 + Math.random() * 78) + '%';
+          const rm = () => { if (b.parentNode) { b.remove(); active--; } };
+          b.addEventListener('animationend', (e) => { if (e.animationName === 'rise') rm(); });
+          b.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (b.dataset.p || G.finished || done) return;
+            b.dataset.p = '1'; b.classList.add('pop');
+            if (hot) { G.bad('¡Esa quema! 🔥'); setTimeout(rm, 180); return; }
+            Sound.bloop(); pops++;
+            bar.style.width = Math.min(100, pops / NEED * 100) + '%';
+            setTimeout(rm, 180);
+            if (pops >= NEED) finish();
+          });
+          zone.appendChild(b);
+        }
+        timer = setTimeout(spawn, GAP + Math.random() * 350);
+      };
+      spawn();
+    }
+  };
+}
+
 /* Servir: mantener presionado la botella y soltar cuando el liquido llegue a la zona verde */
 function makeHoldPour(o) {
   return {
     text: o.text, voice: o.voice,
     init(st, G) {
-      const [z0, z1] = o.zone || [0.45, 0.8];
+      const [zz0, zz1] = o.zone || [0.45, 0.8];
+      const zmid = (zz0 + zz1) / 2, zhalf = (zz1 - zz0) / 2 * byLv(1, 0.7, 0.5);
+      const z0 = zmid - zhalf, z1 = zmid + zhalf;
       st.innerHTML = `<div class="pourwrap"><button class="bottle">${o.bottle}</button><div class="stream"></div>
         <div class="vessel ${o.vesselClass || ''}"><div class="zoneband"></div><div class="liquid"></div></div></div>`;
       const wrap = $('.pourwrap', st), bottle = $('.bottle', st), stream = $('.stream', st), vessel = $('.vessel', st), liquid = $('.liquid', st), band = $('.zoneband', st);
       wrap.style.setProperty('--liq', o.color || '#4fa8ff');
       band.style.bottom = z0 * 100 + '%'; band.style.height = (z1 - z0) * 100 + '%';
-      const FILL = o.fillMs || 3200;
+      const FILL = (o.fillMs || 3200) * byLv(1, 0.85, 0.72);
+      wrap.dataset.fill = FILL; wrap.dataset.mid = zmid;
       let level = 0, pouring = false, alive = true, inZone = false, lock = false, last = performance.now(), raf = 0;
       G.onCleanup(() => { alive = false; cancelAnimationFrame(raf); Sound.pourStop(); });
 
@@ -361,7 +428,7 @@ function makeBake(o) {
   return {
     text: o.text, voice: o.voice,
     init(st, G) {
-      const ZS = 0.55, ZE = 1.0, DUR = 7000;
+      const ZS = byLv(0.55, 0.6, 0.66), ZE = byLv(1.0, 0.88, 0.8), DUR = byLv(7000, 6000, 5200);
       st.innerHTML = `<div class="oven baking"><div class="oven-window"><div class="tray">${o.tray}</div></div><div class="smoke">💨💨</div></div>
         <div class="timer"><div class="zone"></div><div class="bar"></div></div>
         <button class="bigbtn" id="take">🧤</button>`;
@@ -376,7 +443,7 @@ function makeBake(o) {
         const p = (now - t0) / DUR;
         bar.style.width = Math.min(1, Math.max(0, p)) * 100 + '%';
         if (p >= ZS && !dinged) { dinged = true; Sound.ding(); timer.classList.add('ready'); win.classList.add('hot'); }
-        if (p > 1.12) {
+        if (p > ZE + 0.12) {
           smoke.classList.remove('show'); void smoke.offsetWidth; smoke.classList.add('show');
           G.bad(o.burnt || '¡Uy, se quemó un poquito! 💨');
           Sound.sizzleStop(); G.later(restart, 1200); t0 = now + 1e9;
@@ -389,7 +456,7 @@ function makeBake(o) {
         const p = (performance.now() - t0) / DUR;
         if (p < 0) return;
         if (p < ZS) G.bad('¡Todavía no, espera el timbre! 🔔');
-        else if (p <= 1.12) { Sound.pop(); G.done(); }
+        else if (p <= ZE + 0.12) { Sound.pop(); G.done(); }
       });
     }
   };
@@ -407,7 +474,7 @@ const PIZZA_STEPS = [
     init(st, G) {
       st.innerHTML = '<button class="dough-ball">👆</button><div class="meter"><div></div></div>';
       const ball = $('.dough-ball', st), bar = $('.meter > div', st);
-      const NEED = 10; let n = 0;
+      const NEED = byLv(10, 14, 18); let n = 0;
       ball.addEventListener('pointerdown', () => {
         if (G.finished) return;
         n++; Sound.squish();
@@ -492,7 +559,7 @@ const PIZZA_STEPS = [
       const zone = $('.pizza-zone', st), pizza = $('.pizza', st), pal = $('.palette', st), bar = $('.meter > div', st);
       const opts = [{ e: '🍄', ok: true }, { e: '🍅', ok: true }, { e: '🧀', ok: true }, { e: '🧸', ok: false }];
       let sel = opts[0], placed = 0;
-      const NEED = 8;
+      const NEED = byLv(8, 10, 12);
       opts.forEach((op) => {
         const b = el('button', 'topbtn' + (op === sel ? ' sel' : ''), op.e);
         b.addEventListener('click', () => { sel = op; Sound.pop(); [...pal.children].forEach((c) => c.classList.toggle('sel', c === b)); });
@@ -754,40 +821,8 @@ const SOUP_STEPS = [
     hint: '¡Un poquito más de agua! 💧', spill: '¡Uy, se desbordó la olla! 💦'
   }),
 
-  /* 3. Hervir: reventar burbujas */
-  {
-    text: '🫧 ¡Revienta las burbujas!',
-    voice: 'Toca las burbujas de la sopa para reventarlas.',
-    init(st, G) {
-      st.innerHTML = '<div class="boilwrap"><div class="boilpot"><div class="soup"></div><div class="bubzone"></div></div><div class="flame">🔥</div></div><div class="meter"><div></div></div>';
-      const zone = $('.bubzone', st), bar = $('.meter > div', st);
-      const NEED = 8; let pops = 0, active = 0, alive = true, timer = 0;
-      G.onCleanup(() => { alive = false; clearTimeout(timer); });
-      const spawn = () => {
-        if (!alive || G.finished) return;
-        if (active < 3) {
-          active++;
-          const b = el('button', 'bub');
-          const size = 58 + Math.random() * 26;
-          b.style.width = b.style.height = size + 'px';
-          b.style.left = (6 + Math.random() * 78) + '%';
-          const rm = () => { if (b.parentNode) { b.remove(); active--; } };
-          b.addEventListener('animationend', (e) => { if (e.animationName === 'rise') rm(); });
-          b.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            if (b.dataset.p || G.finished) return;
-            b.dataset.p = '1'; b.classList.add('pop'); Sound.bloop(); pops++;
-            bar.style.width = pops / NEED * 100 + '%';
-            setTimeout(rm, 180);
-            if (pops >= NEED) G.done();
-          });
-          zone.appendChild(b);
-        }
-        timer = setTimeout(spawn, 450 + Math.random() * 350);
-      };
-      spawn();
-    }
-  },
+  /* 3. Hervir: reventar burbujas (¡las de fuego no!) */
+  makeBubbles({ voice: 'Toca las burbujas de la sopa para reventarlas. ¡Las burbujas de fuego no!' }),
 
   /* 4. Revolver la sopa */
   makeMix({
@@ -803,12 +838,15 @@ const SOUP_STEPS = [
     text: '🧂 ¡Tres pizcas de sal!',
     voice: 'Toca la sal tres veces y luego toca la cuchara para probar la sopa.',
     init(st, G) {
+      const TARGET = byLv(3, 2 + Math.floor(Math.random() * 4), 3 + Math.floor(Math.random() * 4));
+      if (TARGET !== 3) { const msg = `🧂 ¡${TARGET} pizcas de sal!`; showBubble(msg, ''); Game.currentText = msg; Voice.say(`Echa ${TARGET} pizcas de sal y luego toca la cuchara para probar la sopa.`); }
       st.innerHTML = '<div class="boilpot small"><div class="soup"></div><div class="saltfx"></div></div><div class="pinches"></div><div class="saltrow"><button class="saltbtn">🧂</button><button class="tastebtn">🥄</button></div>';
       const pinchesEl = $('.pinches', st), fx = $('.saltfx', st);
       let n = 0;
       const paint = () => {
         pinchesEl.innerHTML = '';
-        for (let i = 0; i < Math.max(3, n); i++) pinchesEl.appendChild(el('span', 'pdot' + (i < n ? ' on' : '') + (i >= 3 ? ' over' : '')));
+        pinchesEl.dataset.target = TARGET;
+        for (let i = 0; i < Math.max(TARGET, n); i++) pinchesEl.appendChild(el('span', 'pdot' + (i < n ? ' on' : '') + (i >= TARGET ? ' over' : '')));
       };
       paint();
       $('.saltbtn', st).addEventListener('click', () => {
@@ -821,8 +859,8 @@ const SOUP_STEPS = [
       });
       $('.tastebtn', st).addEventListener('click', () => {
         if (G.finished) return;
-        if (n === 3) { Sound.pop(); G.done(); }
-        else if (n < 3) G.bad('¡Le falta sal! 🧂');
+        if (n === TARGET) { Sound.pop(); G.done(); }
+        else if (n < TARGET) G.bad('¡Le falta sal! 🧂');
         else { n = 0; paint(); G.bad('¡Demasiada sal! Otra vez 😝'); }
       });
     }
@@ -847,7 +885,7 @@ function makeBlow(o) {
         <button class="blow-eat">${o.eat || '🥄'}</button></div>`;
       const wrap = $('.blow', st), plate = $('.blow-plate', st), fill = $('.blow-fill', st), micRow = $('.blow-mic', st),
         mfill = $('.micfill', st), btn = $('.blow-btn', st), eat = $('.blow-eat', st);
-      const COOL_MS = o.coolMs || 2400, REHEAT_MS = 14000;
+      const COOL_MS = o.coolMs || 2000;
       let t = 1, cool = false, alive = true, held = false, det = null, quiet = 0, hinted = false, last = performance.now(), raf = 0;
       G.onCleanup(() => { alive = false; cancelAnimationFrame(raf); Mic.close(); });
 
@@ -870,7 +908,7 @@ function makeBlow(o) {
         mfill.classList.toggle('on', m.blowing);
         if (!cool) {
           if (b) { t = Math.max(0, t - dt / COOL_MS); quiet = 0; }
-          else { t = Math.min(1, t + dt / REHEAT_MS); quiet += dt; }
+          else quiet += dt;                                   // una vez que baja, NO vuelve a calentarse
           fill.style.width = (t * 100) + '%';
           if (t <= 0.04) {
             cool = true; wrap.classList.remove('blowing'); wrap.classList.add('cool');
@@ -899,7 +937,7 @@ function makeFlip(o) {
   return {
     text: o.text, voice: o.voice,
     init(st, G) {
-      const FLIPS = o.flips || 2, READY = 2300, BURN = 6800;
+      const FLIPS = o.flips || byLv(2, 3, 4), READY = byLv(2300, 2500, 2700), BURN = byLv(6800, 5600, 4600);
       st.innerHTML = `<div class="panwrap"><div class="panhint">⬆️</div><div class="pancake"></div><div class="pan"></div></div><div class="pdots"></div>`;
       const wrap = $('.panwrap', st), cake = $('.pancake', st), dots = $('.pdots', st);
       let n = 0, t0 = performance.now(), alive = true, dinged = false, busy = false, raf = 0, y0 = null, tdown = 0;
@@ -946,11 +984,14 @@ function makeStack(o) {
     init(st, G) {
       st.innerHTML = `<div class="seqrow"></div><div class="stack"></div><div class="shelf stackshelf"></div>`;
       const seq = $('.seqrow', st), stack = $('.stack', st), shelf = $('.shelf', st);
-      const order = o.order;                                    // [{e, c}, ...] de abajo hacia arriba
+      const hard = LV() >= 2 && o.orderHard;
+      const order = hard ? o.orderHard : o.order;                // [{e, c}, ...] de abajo hacia arriba
+      const btns = hard ? o.buttonsHard : o.buttons;
+      if (hard) showBubble(order.map((l) => l.e).join(' ') + '  ¡Apila!', '');
       let n = 0;
       const paint = () => { seq.innerHTML = ''; order.forEach((l, i) => seq.appendChild(el('span', 'seqdot' + (i < n ? ' on' : i === n ? ' next' : ''), l.e))); };
       paint();
-      o.buttons.forEach((b) => {
+      btns.forEach((b) => {
         const btn = el('button', 'item', b.e);
         if (b.bg) btn.style.background = b.bg;
         btn.addEventListener('click', () => {
@@ -964,6 +1005,106 @@ function makeStack(o) {
         });
         shelf.appendChild(btn);
       });
+    }
+  };
+}
+
+/* Memoria (nivel 2 y 3): mirar los ingredientes y despues elegirlos de memoria */
+function makeMemory(o) {
+  return {
+    minLevel: 2,
+    text: '🧠 ¡Memoriza la receta!',
+    voice: 'Mira bien estos ingredientes. ¡Van a desaparecer! Después tócalos de memoria.',
+    init(st, G) {
+      const SHOW = byLv(0, 4000, 2800);
+      st.innerHTML = '<div class="memcard"></div><div class="memtimer"><div></div></div><div class="shelf six memshelf"></div>';
+      const card = $('.memcard', st), tm = $('.memtimer > div', st), shelf = $('.memshelf', st);
+      o.items.forEach((e) => card.appendChild(el('span', '', e)));
+      shelf.style.visibility = 'hidden';
+      tm.style.transition = `width ${SHOW}ms linear`; requestAnimationFrame(() => requestAnimationFrame(() => { tm.style.width = '0%'; }));
+      let left = o.items.length, ready = false;
+      G.later(() => {
+        ready = true;
+        card.innerHTML = o.items.map(() => '<span class="q">❓</span>').join('');
+        showBubble('¿Cuáles eran? 🤔', ''); Game.currentText = '¿Cuáles eran? 🤔';
+        Voice.say('¿Cuáles eran?');
+        shelf.style.visibility = 'visible';
+      }, SHOW);
+      const pool = shuffle(['🍌', '🍓', '🥦', '🍋', '🍞', '🍟', '🥒', '🍇', '🍒', '🥔'].filter((e) => !o.items.includes(e))).slice(0, 3);
+      shuffle(o.items.concat(pool)).forEach((e) => {
+        const b = el('button', 'item', e); b.dataset.ok = o.items.includes(e) ? '1' : '0';
+        b.addEventListener('click', () => {
+          if (!ready || G.finished || b.disabled) return;
+          if (b.dataset.ok === '0') { shakeEl(b); G.bad('¡Esa no estaba en la receta! 🙀'); return; }
+          b.disabled = true; b.classList.add('full'); Sound.pop(); left--;
+          if (left === 0) G.later(() => G.done(), 300);
+        });
+        shelf.appendChild(b);
+      });
+    }
+  };
+}
+
+/* Velas: contar y poner exactamente las que pide el pastel */
+function makeCandleCount() {
+  return {
+    text: '🕯️ ¡Pon las velas!',
+    voice: 'Toca la vela para ponerla en la torta. ¡Pon justo las que dice el número! Luego toca el visto.',
+    init(st, G) {
+      const N = byLv(5, 3 + Math.floor(Math.random() * 6), 4 + Math.floor(Math.random() * 6));
+      showBubble(`🕯️ ¡Pon ${N} velas!`, ''); Game.currentText = `🕯️ ¡Pon ${N} velas!`;
+      Voice.say(`Pon ${N} velas en la torta y luego toca el visto.`);
+      st.innerHTML = `<div class="bignum" data-n="${N}">${N}</div><div class="cakebox"><div class="candles"></div><div class="cake-top"></div><div class="cake-mid"></div><div class="cake-bot"></div></div>
+        <div class="candlerow"><button class="roundbtn" id="candUndo">↩️</button><button class="item candbtn">🕯️</button><button class="roundbtn ok" id="candOk">✅</button></div>`;
+      const row = $('.candles', st); let n = 0;
+      const paint = () => { row.innerHTML = ''; for (let i = 0; i < n; i++) row.appendChild(el('span', 'cand', '🕯️')); };
+      $('.candbtn', st).addEventListener('click', () => { if (G.finished) return; if (n >= 10) { G.bad('¡Es demasiado! 🙀'); return; } n++; Sound.pop(); paint(); });
+      $('#candUndo', st).addEventListener('click', () => { if (G.finished || n <= 0) return; n--; paint(); });
+      $('#candOk', st).addEventListener('click', () => {
+        if (G.finished) return;
+        if (n === N) { Sound.pop(); G.done(); }
+        else G.bad(n < N ? '¡Faltan velas! 🕯️' : '¡Sobran velas! 🕯️');
+      });
+    }
+  };
+}
+
+/* Soplar las velas con el microfono (o con el boton 💨) */
+function makeBlowCandles() {
+  return {
+    text: '🎂 ¡Sopla las velas!',
+    voice: 'Pide un deseo y sopla hacia el celular para apagar todas las velas.',
+    init(st, G) {
+      const N = byLv(5, 6, 7);
+      st.innerHTML = `<div class="blow"><div class="cakebox big"><div class="flames"></div><div class="candles"></div><div class="cake-top"></div><div class="cake-mid"></div><div class="cake-bot"></div></div>
+        <div class="blow-mic"><span>🎤</span><div class="micmeter"><div class="micfill"></div></div></div><button class="blow-btn" hidden>💨</button></div>`;
+      const wrap = $('.blow', st), flames = $('.flames', st), candles = $('.candles', st), micRow = $('.blow-mic', st), mfill = $('.micfill', st), btn = $('.blow-btn', st);
+      const fl = [];
+      for (let i = 0; i < N; i++) { candles.appendChild(el('span', 'cand', '🕯️')); const f = el('span', 'flame2', '🔥'); flames.appendChild(f); fl.push(f); }
+      let p = 0, alive = true, held = false, det = null, last = performance.now(), raf = 0, out = 0;
+      G.onCleanup(() => { alive = false; cancelAnimationFrame(raf); Mic.close(); });
+      micRow.style.visibility = 'hidden';
+      Mic.open().then((r) => {
+        if (!alive) return;
+        if (r.ok) { det = Mic.detector(); micRow.style.visibility = 'visible'; }
+        else { micRow.hidden = true; btn.hidden = false; showBubble('💨 Mantén presionado y sopla', ''); }
+      });
+      btn.addEventListener('pointerdown', (e) => { held = true; btn.classList.add('held'); try { btn.setPointerCapture(e.pointerId); } catch (err) { /* nada */ } });
+      ['pointerup', 'pointercancel'].forEach((ev) => btn.addEventListener(ev, () => { held = false; btn.classList.remove('held'); }));
+      const loop = (now) => {
+        if (!alive || G.finished) return;
+        const dt = Math.min(100, now - last); last = now;
+        const m = det ? det.update(dt) : { blowing: false, level: 0 };
+        const b = m.blowing || held;
+        wrap.classList.toggle('blowing', b);
+        mfill.style.width = Math.round(m.level * 100) + '%'; mfill.classList.toggle('on', m.blowing);
+        if (b) p = Math.min(1, p + dt / (byLv(1800, 2400, 3000)));
+        const should = Math.floor(p * N + 1e-6);
+        while (out < should) { fl[out].classList.add('out'); out++; Sound.pop(); }
+        if (out >= N) { Mic.close(); G.later(() => G.done(), 450); return; }
+        raf = requestAnimationFrame(loop);
+      };
+      raf = requestAnimationFrame(loop);
     }
   };
 }
@@ -988,7 +1129,7 @@ const PASTA_STEPS = [
       { k: 'd', e: '🫒', ok: true, bg: '#eaf3d3' }
     ]
   }),
-  Object.assign({}, SOUP_STEPS[2], { voice: 'Toca las burbujas del agua para reventarlas.' }),
+  makeBubbles({ voice: 'Toca las burbujas del agua para reventarlas. ¡Las burbujas de fuego no!' }),
   makeHoldPour({
     text: '🍅 ¡Mantén presionado!',
     voice: 'Mantén presionado el tomate y suelta cuando la salsa llegue a la zona verde.',
@@ -1113,7 +1254,9 @@ const BURGER_STEPS = [
     text: '🍞 🥩 🧀 🥬 🍞  ¡Apila!',
     voice: 'Toca en este orden: pan, carne, queso, lechuga y otra vez pan.',
     order: [{ e: '🍞', c: '#f0b45c' }, { e: '🥩', c: '#b3593a' }, { e: '🧀', c: '#ffd24d' }, { e: '🥬', c: '#8ad46a' }, { e: '🍞', c: '#f0b45c' }],
-    buttons: [{ e: '🍞', bg: '#fff3d6' }, { e: '🥩', bg: '#ffe3de' }, { e: '🧀', bg: '#fff7c9' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en la hamburguesa! 🧦' }]
+    buttons: [{ e: '🍞', bg: '#fff3d6' }, { e: '🥩', bg: '#ffe3de' }, { e: '🧀', bg: '#fff7c9' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en la hamburguesa! 🧦' }],
+    orderHard: [{ e: '🍞', c: '#f0b45c' }, { e: '🥩', c: '#b3593a' }, { e: '🧀', c: '#ffd24d' }, { e: '🍅', c: '#ee5a4a' }, { e: '🥬', c: '#8ad46a' }, { e: '🥩', c: '#b3593a' }, { e: '🍞', c: '#f0b45c' }],
+    buttonsHard: [{ e: '🍞', bg: '#fff3d6' }, { e: '🥩', bg: '#ffe3de' }, { e: '🧀', bg: '#fff7c9' }, { e: '🍅', bg: '#ffe3e3' }, { e: '🥬', bg: '#e3f4dc' }, { e: '🧦', bg: '#e5eaff', msg: '¡El calcetín no va en la hamburguesa! 🧦' }]
   }),
   makeHoldPour({
     text: '🍅 ¡Mantén presionado!',
@@ -1182,6 +1325,68 @@ const CUPCAKE_STEPS = [
 ];
 
 /* =========================================================
+   TORTA 🎂
+   ========================================================= */
+const CAKE_STEPS = [
+  makeIngredients({
+    text: '🥚 🥛 🌾  ¡Al tazón!',
+    voice: 'Toca el huevo, la leche y la harina para echarlos al tazón. ¡El pescado no!',
+    container: 'bowl', fillColor: '#f6dca0',
+    items: [
+      { k: 'a', e: '🥚', ok: true, bg: '#fff7de' },
+      { k: 'b', e: '🐟', ok: false, bg: '#e5eaff', msg: '¡El pescado no va en la torta! 🐟' },
+      { k: 'c', e: '🥛', ok: true, bg: '#eef6ff' },
+      { k: 'd', e: '🌾', ok: true, bg: '#fff3d6' }
+    ]
+  }),
+  makeMix({
+    text: '🥄 ¡Gira para mezclar!',
+    voice: 'Gira tu dedo dentro del tazón para mezclar la masa de la torta.',
+    bowlClass: '', spill: '¡Uy, se sale la masa! 💦',
+    inner: '<div class="mixinner salad"><span>🥚</span><span>🥛</span><span>🌾</span><span>🥚</span><span>🥛</span></div>',
+    spinSel: '.mixinner', spoon: '🥄', laps: 3
+  }),
+  makeHoldPour({
+    text: '🥣 ¡Mantén presionado!',
+    voice: 'Mantén presionada la masa y suelta cuando llegue a la zona verde del molde.',
+    bottle: '🥣', color: '#f2d39b', vesselClass: 'jar', zone: [0.5, 0.8],
+    hint: '¡Un poquito más de masa! 🥣', spill: '¡Uy, se desbordó el molde! 💦'
+  }),
+  makeBake({
+    text: '🔔 ¡Toca cuando suene!',
+    voice: 'Espera a que suene el timbre y saca la torta del horno.',
+    tray: '<span class="bake-emoji">🎂</span>',
+    burnt: '¡Uy, se quemó la torta! 💨'
+  }),
+  makeHoldPour({
+    text: '🍦 ¡Mantén presionado!',
+    voice: 'Mantén presionada la crema y suelta cuando llegue a la zona verde.',
+    bottle: '🍦', color: '#ffb6d5', vesselClass: 'jar', zone: [0.45, 0.8],
+    hint: '¡Un poquito más de crema! 🍦', spill: '¡Uy, mucha crema! 💦'
+  }),
+  makeIngredients({
+    text: '🍓 🍒 ⭐  ¡A decorar!',
+    voice: 'Toca la fresa, la cereza y la estrella para decorar. ¡El brócoli no!',
+    container: 'bowl', fillColor: '#ffc2dc',
+    items: [
+      { k: 'a', e: '🍓', ok: true, bg: '#ffe3e3' },
+      { k: 'b', e: '🥦', ok: false, bg: '#e3f4dc', msg: '¡El brócoli no va en la torta! 🥦' },
+      { k: 'c', e: '🍒', ok: true, bg: '#ffe0e6' },
+      { k: 'd', e: '⭐', ok: true, bg: '#fff7c9' }
+    ]
+  }),
+  makeCandleCount(),
+  makeBlowCandles()
+];
+
+// Memoria: ingredientes de cada receta (para el paso "memoriza", nivel 2 y 3)
+const MEM = {
+  cookies: ['🌾', '🍬', '🧈'], pizza: ['🍅', '🧀', '🍄'], salad: ['🥬', '🍅', '🥕'], soup: ['🥕', '🥔', '🧅'],
+  pasta: ['🍝', '🧂', '🫒'], cocoa: ['🍫', '🥛', '🍯'], pancakes: ['🥚', '🥛', '🌾'], burger: ['🥩', '🧀', '🥬'],
+  cupcakes: ['🥚', '🥛', '🌾'], cake: ['🥚', '🍫', '🥛']
+};
+
+/* =========================================================
    RECETAS DEL JUEGO
    ========================================================= */
 const RECIPES = {
@@ -1230,9 +1435,17 @@ const RECIPES = {
     winTitle: '¡Hamburguesa lista!', winVoice: '¡Hamburguesa lista! ¡Qué rica!',
     result(box) { ['🍔', '🍟', '🥤', '🍔'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
   },
+  cake: {
+    emoji: '🎂', name: 'Torta', steps: CAKE_STEPS,
+    winTitle: '¡Torta lista!', winVoice: '¡Torta lista! ¡Feliz cumpleaños!',
+    result(box) { ['🎂', '🕯️', '🍓', '🎂'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
+  },
   cupcakes: {
     emoji: '🧁', name: 'Cupcakes', steps: CUPCAKE_STEPS,
     winTitle: '¡Cupcakes listos!', winVoice: '¡Cupcakes listos! ¡Qué ricos!',
     result(box) { ['🧁', '🍓', '⭐', '🧁'].forEach((e) => box.appendChild(el('span', 'win-emoji', e))); }
   }
 };
+
+// El paso de memoria va primero en cada receta (solo se usa en nivel 2 y 3)
+Object.keys(MEM).forEach((k) => RECIPES[k].steps.unshift(makeMemory({ items: MEM[k] })));

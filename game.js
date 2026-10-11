@@ -4,15 +4,18 @@
    Sin publicidad, sin internet, sin compras, sin enlaces.
    ========================================================= */
 
-const APP_VERSION = '5';
+const APP_VERSION = '6';
 const $ = (s, r = document) => r.querySelector(s);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const LV = () => Math.max(1, Math.min(3, +Settings.data.level || 2));            // dificultad 1 facil, 2 chef, 3 maestro
+const byLv = (a, b, c) => [a, b, c][LV() - 1];
+const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 /* ---------------- Ajustes y progreso (se guardan en el celular) ---------------- */
 const Settings = {
-  data: { volume: 0.8, voice: true, stress: true, muted: false, mic: true, micSens: 1 },
+  data: { volume: 0.8, voice: true, stress: true, muted: false, mic: true, micGain: 2.5, badVol: 0.35, level: 2 },
   load() { try { Object.assign(this.data, JSON.parse(localStorage.getItem('gatochef.settings') || '{}')); } catch (e) { /* sin almacenamiento */ } },
   save() { try { localStorage.setItem('gatochef.settings', JSON.stringify(this.data)); } catch (e) { /* nada */ } }
 };
@@ -238,7 +241,9 @@ const Sound = (() => {
       src.buffer = buf;
       let rate = 1;
       if (rateVar) { rate = 1 + (Math.random() - 0.5) * rateVar; src.playbackRate.value = rate; }
-      src.connect(master); src.start();
+      const gn = ctx.createGain();
+      gn.gain.value = group === 'meowBad' ? Math.max(0.05, Math.min(1, Settings.data.badVol == null ? 0.35 : Settings.data.badVol)) : 1;
+      src.connect(gn); gn.connect(master); src.start();
       return Math.round(buf.duration / rate * 1000);
     } else if (synth[synthName]) {
       synth[synthName]();
@@ -251,7 +256,7 @@ const Sound = (() => {
     const src = ctx.createBufferSource();
     const real = buffers.sizzle && buffers.sizzle[0];
     src.buffer = real || noiseBuf; src.loop = true;
-    const g = ctx.createGain(); g.gain.value = real ? 0.5 : 0.07;
+    const g = ctx.createGain(); g.gain.value = real ? 0.18 : 0.018;
     if (real) { src.connect(g); } else {
       const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3500; src.connect(f); f.connect(g);
     }
@@ -267,7 +272,7 @@ const Sound = (() => {
     const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 0.7;
     const lfo = ctx.createOscillator(); lfo.frequency.value = 7;
     const lg = ctx.createGain(); lg.gain.value = 450; lfo.connect(lg); lg.connect(f.frequency);
-    const g = ctx.createGain(); g.gain.value = 0.2;
+    const g = ctx.createGain(); g.gain.value = 0.06;
     src.connect(f); f.connect(g); g.connect(master); src.start(); lfo.start();
     pourStopFn = () => {
       try { g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.12); src.stop(ctx.currentTime + 0.15); lfo.stop(ctx.currentTime + 0.15); } catch (e) { /* ya parado */ }
@@ -368,12 +373,12 @@ const Mic = (() => {
         frames++;
         if (floor === null) floor = rms;
         else if (rms < floor) floor = floor * 0.8 + rms * 0.2;
-        const sens = Math.max(0.3, Math.min(3, Settings.data.micSens || 1));
-        const thr = Math.max(0.012, floor * 2.5) / sens;
+        const gain = Math.max(0.5, Math.min(8, Settings.data.micGain || 2.5));
+        const thr = Math.max(0.0035 / gain, floor * (1 + 2.6 / gain));        // mas "gain" = detecta soplidos mas suaves
         if (rms >= floor) floor += (rms - floor) * (rms < thr ? 0.004 : 0.0004);   // un soplido largo casi no sube el ruido de fondo
-        const cand = frames > 20 && rms > thr && low > 0.5 && flat > 0.3;
+        const cand = frames > 15 && rms > thr && low > 0.4 && flat > 0.2;
         hold = cand ? hold + dt : Math.max(0, hold - dt * 2);
-        return { blowing: hold > 110, level: Math.min(1, rms / (thr * 3)), rms, low, flat, thr };
+        return { blowing: hold > 70, level: Math.min(1, rms / (thr * 3)), rms, low, flat, thr };
       }
     };
   }
@@ -478,7 +483,7 @@ function showBubble(text, kind) {
 const Game = {
   idx: 0, token: 0, finished: false, lastBad: 0, cleanups: [], currentText: '', recipe: 'cookies',
 
-  steps() { return RECIPES[this.recipe].steps; },
+  steps() { return RECIPES[this.recipe].steps.filter((s) => (s.minLevel || 1) <= LV()); },
 
   start(recipe) {
     this.token++; this.idx = 0;
@@ -601,10 +606,15 @@ function setupSettings() {
   vol.addEventListener('input', () => { Settings.data.volume = +vol.value; Sound.applyVolume(); Settings.save(); });
   voice.addEventListener('change', () => { Settings.data.voice = voice.checked; if (!voice.checked) Voice.stop(); Settings.save(); });
   stress.addEventListener('change', () => { Settings.data.stress = stress.checked; Settings.save(); });
+  const bv = $('#setBadVol'), lvl = $('#setLevel');
+  bv.value = Settings.data.badVol; lvl.value = Settings.data.level;
+  bv.addEventListener('input', () => { Settings.data.badVol = +bv.value; Settings.save(); });
+  bv.addEventListener('change', () => { Sound.resume(); setTimeout(() => Sound.testBad(), 60); });
+  lvl.addEventListener('change', () => { Settings.data.level = +lvl.value; Settings.save(); });
   const micChk = $('#setMic'), sens = $('#setSens');
-  micChk.checked = Settings.data.mic; sens.value = Settings.data.micSens;
+  micChk.checked = Settings.data.mic; sens.value = Settings.data.micGain;
   micChk.addEventListener('change', () => { Settings.data.mic = micChk.checked; Settings.save(); });
-  sens.addEventListener('input', () => { Settings.data.micSens = +sens.value; Settings.save(); });
+  sens.addEventListener('input', () => { Settings.data.micGain = +sens.value; Settings.save(); });
   // Probar el microfono: barra en vivo + aviso de "soplido detectado"
   const meter = $('#micMeter'), fill = $('#micFill'), mstate = $('#micState'), btnMic = $('#btnTestMic');
   let testing = false, testRaf = 0;

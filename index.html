@@ -59,11 +59,17 @@
         <label class="check"><input id="setStress" type="checkbox"> Maullido de gato estresado al equivocarse</label>
         <label class="check"><input id="setMic" type="checkbox"> 🎤 Usar el micrófono para soplar</label>
         <label>Sensibilidad del soplido
-          <input id="setSens" type="range" min="0.4" max="2.5" step="0.1">
+          <input id="setSens" type="range" min="0.5" max="8" step="0.25">
         </label>
         <button id="btnTestMic" class="settings-test">🎤 Probar micrófono (sopla hacia el celular)</button>
         <div id="micMeter" class="micmeter" hidden><div id="micFill" class="micfill"></div></div>
         <p id="micState" class="diag" hidden></p>
+        <label>Volumen del maullido de error
+          <input id="setBadVol" type="range" min="0.05" max="1" step="0.05">
+        </label>
+        <label>Dificultad
+          <select id="setLevel"><option value="1">1 · Fácil</option><option value="2">2 · Chef</option><option value="3">3 · Maestro</option></select>
+        </label>
         <button id="btnTestMeow" class="settings-test">🔊 Probar el maullido de error</button>
         <p id="diag" class="diag"></p>
         <button id="btnCloseSettings" class="settings-close">Cerrar</button>
